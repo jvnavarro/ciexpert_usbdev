@@ -15,7 +15,7 @@ class usbdev_env extends cip_base_env #( .CFG_T(usbdev_env_cfg));
 
   // 4. Fase de construção
   virtual function void build_phase(uvm_phase phase);
-    super.build_phase(phase); // <--- VITAL: chama a construção da classe pai
+    super.build_phase(phase); //  chama a construção da classe pai
 
     cov           = usbdev_env_cov::type_id::create("cov", this);
     scoreboard    = usbdev_scoreboard::type_id::create("scoreboard", this);
