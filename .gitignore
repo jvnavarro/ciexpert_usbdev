@@ -1,0 +1,21 @@
+# Build and simulation output directory
+out/
+build/
+
+# VCS / Verdi artifacts
+simv
+simv.daidir/
+simv.vdb/
+csrc/
+*.log
+*.key
+*.fsdb*
+*.vcd
+*.vpd
+ucli.key
+vc_hdrs.h
+DVEfiles/
+verdi*
+novas*
+*.conf
+*.rc
