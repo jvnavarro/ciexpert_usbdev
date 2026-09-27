@@ -13,7 +13,7 @@
   `define gfn get_full_name()
 `else
   // verilog_lint: waive macro-name-style
-  `define gfn $sformatf("%m")
+  `define gfn get_full_name()
 `endif
 `endif
 

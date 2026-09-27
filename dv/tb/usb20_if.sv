@@ -1,18 +1,17 @@
-interface usb20_if (
-  input logic clk_i,
-  input logic rst_ni
-);
+interface usb20_if (input logic clk_i, input logic rst_ni);
 
-  // Modport para o Driver
-  modport driver_mp (
-    input clk_i,
-    input rst_ni
-  );
+  // Sinais de Entrada do DUT (injetados pelo Driver / Testbench)
+  logic cio_usb_dp_i;
+  logic cio_usb_dn_i;
+  logic cio_sense_i;
 
-  // Modport para o Monitor
-  modport monitor_mp (
-    input clk_i,
-    input rst_ni
-  );
+  // Sinais de Saída do DUT (gerados pelo chip USB)
+  logic cio_usb_dp_o;
+  logic cio_usb_dn_o;
 
-endinterface
+  // Sinais de Habilitação de Saída (gerados pelo chip USB)
+  logic cio_usb_dp_en_o;
+  logic cio_usb_dn_en_o;
+  logic cio_usb_oe_o;
+
+endinterface : usb20_if
