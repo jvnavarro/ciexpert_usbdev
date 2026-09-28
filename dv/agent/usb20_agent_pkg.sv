@@ -12,6 +12,7 @@ package usb20_agent_pkg;
   `include "usb_transaction.sv"
   `include "usb20_agent_cfg.sv"
   `include "usb20_sequencer.sv"
+  `include "usb20_basic_seq.sv"
   `include "usb20_driver.sv"
   `include "usb20_monitor.sv"
   `include "usb20_agent.sv"

@@ -5,6 +5,7 @@ class usbdev_virtual_sequencer extends cip_base_virtual_sequencer #(
 
   // 1. Registo na fábrica do UVM como COMPONENTE
   `uvm_component_utils(usbdev_virtual_sequencer)
+   usb20_sequencer usb20_sequencer_h;
 
   // 2. Construtor padrão
   function new(string name = "usbdev_virtual_sequencer", uvm_component parent = null);

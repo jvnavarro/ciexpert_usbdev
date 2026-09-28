@@ -1,5 +1,9 @@
-class usb20_agent extends dv_base_agent #(.CFG_T(usb20_agent_cfg));
-
+class usb20_agent extends dv_base_agent #(
+    .CFG_T(usb20_agent_cfg),
+    .DRIVER_T(usb20_driver),
+    .SEQUENCER_T(usb20_sequencer),
+    .MONITOR_T(usb20_monitor)
+);
   // 1. Registro na fábrica 
   `uvm_component_utils(usb20_agent)
 

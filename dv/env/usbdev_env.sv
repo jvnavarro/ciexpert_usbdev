@@ -1,4 +1,7 @@
-class usbdev_env extends cip_base_env #( .CFG_T(usbdev_env_cfg));
+class usbdev_env extends cip_base_env #(
+    .CFG_T(usbdev_env_cfg),
+    .VIRTUAL_SEQUENCER_T(usbdev_virtual_sequencer)
+);
 
   // 1. Registro na fábrica do UVM 
   `uvm_component_utils(usbdev_env)
@@ -25,6 +28,7 @@ class usbdev_env extends cip_base_env #( .CFG_T(usbdev_env_cfg));
   // 5. Fase de conexão
   virtual function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
+    virtual_sequencer.usb20_sequencer_h = m_usb20_agent.sequencer;
     // no futuro ligaremos as portas TLM do m_usb20_agent ao scoreboard..
   endfunction
 
