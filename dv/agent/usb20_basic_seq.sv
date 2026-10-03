@@ -10,7 +10,11 @@ class usb20_basic_seq extends uvm_sequence #(usb_transaction);
 
    req = usb_transaction::type_id::create("req");
 
+   // Cria o pacote, randomiza e envia ao driver via sequencer
    start_item(req);
+   if (!req.randomize()) begin
+     `uvm_fatal(get_type_name(), "Falha ao randomizar usb_transaction")
+   end
    finish_item(req);
   endtask
 

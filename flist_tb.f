@@ -47,8 +47,10 @@ dv/cip_infra/push_pull_agent/push_pull_agent_pkg.sv
 dv/cip_infra/cip_lib/cip_base_pkg.sv
 dv/cip_infra/ral/usbdev_ral_pkg.sv
 
-// 2. Pacote do Agente USB 2.0 (do projeto):
+// 2. Pacotes do projeto: agente USB 2.0, env (com vseqs) e testes:
 dv/agent/usb20_agent_pkg.sv
+dv/env/usbdev_env_pkg.sv
+dv/tests/usbdev_test_pkg.sv
 
 // 3. Interfaces:
 dv/cip_infra/common_ifs/clk_rst_if.sv

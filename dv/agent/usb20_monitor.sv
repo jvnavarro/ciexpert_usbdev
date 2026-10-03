@@ -19,8 +19,8 @@ class usb20_monitor extends dv_base_monitor #(
     end
   endfunction
 
-  virtual task run_phase(uvm_phase phase);
-    super.run_phase(phase);
+  // Chamada pelo run_phase do dv_base_monitor
+  virtual protected task collect_trans();
     forever begin
       @(posedge vif.clk_i);
       // Leitura passiva dos pinos no futuro...

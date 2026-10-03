@@ -1,27 +1,32 @@
-class usbdev_base_test extends cip_base_test #(.ENV_T        (usbdev_env), .CFG_T        (usbdev_env_cfg),.VSQR_T       (usbdev_virtual_sequencer));
-  `uvm_component_utils(usbdev_base_test)
+// Sequencia virtual base do usbdev (padrao CIP OpenTitan).
+// Todas as vseqs do usbdev (ex.: usbdev_smoke_vseq) herdam desta classe.
+class usbdev_base_vseq extends cip_base_vseq #(
+  .RAL_T               (usbdev_reg_block),
+  .CFG_T               (usbdev_env_cfg),
+  .COV_T               (usbdev_env_cov),
+  .VIRTUAL_SEQUENCER_T (usbdev_virtual_sequencer)
+);
 
-  function new(string name = "usbdev_base_test", uvm_component parent = null);
-    super.new(name, parent);
+  // 1. Registro na fábrica do UVM como OBJETO (sequencias nao sao componentes)
+  `uvm_object_utils(usbdev_base_vseq)
+
+  // 2. Construtor padrão de uvm_object (recebe apenas o nome)
+  function new(string name = "usbdev_base_vseq");
+    super.new(name);
   endfunction
 
-  virtual function void build_phase(uvm_phase phase);
-    super.build_phase(phase);
-  endfunction
+  // 3. Inicialização do DUT (reset feito pela classe base)
+  virtual task dut_init(string reset_kind = "HARD");
+    super.dut_init(reset_kind);
+  endtask
 
-  virtual task run_phase(uvm_phase phase);
-    usbdev_base_vseq vseq;
-    super.run_phase(phase);
-    // 1. Instancia a sequência através da fábrica do UVM
-    vseq = usbdev_base_vseq::type_id::create("vseq");
-    // 2. Aponta a sequência para o virtual sequencer que reside dentro do env
-    vseq.set_sqr(env.virtual_sequencer);
-    // 3. Levanta a 'objection' para avisar o UVM que a simulação NÃO deve terminar ainda
-    phase.raise_objection(this);
-    // 4. Inicia a execução do roteiro (task body da vseq) dentro do virtual sequencer
-    vseq.start(env.virtual_sequencer);
-    // 5. Baixa a 'objection' indicando que este teste terminou e a simulação pode fechar
-    phase.drop_objection(this);
+  // 4. Finalização do DUT (classe base espera os acessos TL-UL pendentes terminarem)
+  virtual task dut_shutdown();
+    super.dut_shutdown();
+  endtask
+
+  // 5. Corpo vazio: as vseqs filhas implementam o roteiro do teste
+  virtual task body();
   endtask
 
 endclass

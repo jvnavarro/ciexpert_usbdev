@@ -8,7 +8,7 @@ package usb20_agent_pkg;
   import dv_base_reg_pkg::*;
   import dv_base_agent_pkg::*;
 
-  // 2. Inclusão dos arquivos do agente
+  // 2. Inclusão dos arquivos do agente (na ordem correta)
   `include "usb_transaction.sv"
   `include "usb20_agent_cfg.sv"
   `include "usb20_sequencer.sv"
@@ -16,8 +16,5 @@ package usb20_agent_pkg;
   `include "usb20_driver.sv"
   `include "usb20_monitor.sv"
   `include "usb20_agent.sv"
-  
-  // Teste temporário para validação
-  `include "usb20_base_test.sv"
 
 endpackage : usb20_agent_pkg

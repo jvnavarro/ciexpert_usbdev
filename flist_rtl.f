@@ -20,9 +20,9 @@ rtl/prim/prim_ram_2p_pkg.sv
 
 // 2. Packages Top e TL-UL
 rtl/top/top_pkg.sv
-rtl/top/lc_ctrl_pkg.sv
-rtl/top/lc_ctrl_reg_pkg.sv
 rtl/top/lc_ctrl_state_pkg.sv
+rtl/top/lc_ctrl_reg_pkg.sv
+rtl/top/lc_ctrl_pkg.sv
 rtl/tlul/tlul_pkg.sv
 
 // 3. Packages USBDEV
@@ -68,9 +68,7 @@ rtl/prim/prim_alert_sender.sv
 // 5. Modulos TL-UL
 rtl/tlul/tlul_adapter_host.sv
 rtl/tlul/tlul_adapter_reg.sv
-rtl/tlul/tlul_adapter_reg_racl.sv
 rtl/tlul/tlul_adapter_sram.sv
-rtl/tlul/tlul_adapter_sram_racl.sv
 rtl/tlul/tlul_assert.sv
 rtl/tlul/tlul_cmd_intg_chk.sv
 rtl/tlul/tlul_cmd_intg_gen.sv

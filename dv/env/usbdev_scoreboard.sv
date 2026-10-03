@@ -22,4 +22,9 @@ class usbdev_scoreboard extends cip_base_scoreboard #(
     super.connect_phase(phase);
   endfunction
 
+  // 5. Acessos TL-UL: obrigatorio sobrescrever (a classe base da CIP da fatal se chamada).
+  //    Checagens dos CSRs serao implementadas no futuro.
+  virtual task process_tl_access(tl_seq_item item, tl_channels_e channel, string ral_name);
+  endtask
+
 endclass
