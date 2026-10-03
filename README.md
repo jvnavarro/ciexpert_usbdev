@@ -49,6 +49,7 @@ ciexpert_usbdev/
 estão no `flist_tb.f`.
 
 ---
+![Estrutura do repositório USBDEV](doc/usb_dev_repositorio.drawio.svg)
 
 ## Diagrama do ambiente
 
