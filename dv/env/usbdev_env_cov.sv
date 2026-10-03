@@ -3,7 +3,6 @@ class usbdev_env_cov extends cip_base_env_cov #(
   .CFG_T(usbdev_env_cfg)
 );
 
-  // 1. Registro na fábrica do UVM 
   `uvm_component_utils(usbdev_env_cov)
 
   // 2. Construtor padrão de componente 

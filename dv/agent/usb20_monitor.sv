@@ -3,7 +3,6 @@ class usb20_monitor extends dv_base_monitor #(
   .CFG_T (usb20_agent_cfg)
 );
 
-  // Sem ponto e virgula no final da macro!
   `uvm_component_utils(usb20_monitor)
 
   virtual usb20_if vif;

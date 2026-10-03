@@ -15,6 +15,5 @@ class usbdev_base_test extends cip_base_test #(
 
   // NÃO COLOQUE A RUN_PHASE AQUI.
   // A classe pai 'cip_base_test' já cuida do randomize() e start() da sequência
-  // baseada na variável TEST_SEQ do seu Makefile!
 
 endclass

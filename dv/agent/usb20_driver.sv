@@ -23,7 +23,6 @@ class usb20_driver extends dv_base_driver #(
     forever begin
       seq_item_port.get_next_item(req);
       
-      // Log TRACE corrigido sem erro de sintaxe
       `uvm_info(`gfn, {"TRACE: Transacao recebida:\n", req.sprint()}, UVM_LOW)
       // Logica de manipulacao dos pinos na vif...
       seq_item_port.item_done();

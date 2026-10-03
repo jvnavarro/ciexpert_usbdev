@@ -5,18 +5,14 @@ class usbdev_env extends cip_base_env #(
     .SCOREBOARD_T        (usbdev_scoreboard)
 );
 
-  // 1. Registro na fábrica do UVM
   `uvm_component_utils(usbdev_env)
 
-  // 2. Agente USB 2.0 (cov e scoreboard ja sao criados pelo cip_base_env)
   usb20_agent m_usb20_agent;
 
-  // 3. Construtor padrão
   function new(string name = "usbdev_env", uvm_component parent = null);
     super.new(name, parent);
   endfunction
 
-  // 4. Fase de construção
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase); //  chama a construção da classe pai
 
@@ -24,7 +20,6 @@ class usbdev_env extends cip_base_env #(
     m_usb20_agent = usb20_agent::type_id::create("m_usb20_agent", this);
   endfunction
 
-  // 5. Fase de conexão
   virtual function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
     if (cfg.m_usb20_agent_cfg.is_active) begin
