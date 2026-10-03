@@ -60,5 +60,10 @@ dv/cip_infra/alert_esc_agent/alert_esc_probe_if.sv
 dv/cip_infra/push_pull_agent/push_pull_if.sv
 dv/tb/usb20_if.sv
 
-// 4. Testbench Top-Level:
+
+// 4. Pacotes do Ambiente e testes do USBDEV:
+dv/env/usbdev_env_pkg.sv
+dv/tests/usbdev_test_pkg.sv
+
+// 5. Testbench Top-Level:
 dv/tb/tb.sv

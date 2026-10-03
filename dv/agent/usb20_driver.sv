@@ -18,9 +18,7 @@ class usb20_driver extends dv_base_driver #(
     end
   endfunction
 
-  virtual task run_phase(uvm_phase phase);
-    super.run_phase(phase);
-    
+  virtual task get_and_drive();
     forever begin
       seq_item_port.get_next_item(req);
       

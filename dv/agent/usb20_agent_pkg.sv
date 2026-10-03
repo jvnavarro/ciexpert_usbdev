@@ -17,7 +17,4 @@ package usb20_agent_pkg;
   `include "usb20_monitor.sv"
   `include "usb20_agent.sv"
   
-  // Teste temporário para validação
-  `include "usb20_base_test.sv"
-
 endpackage : usb20_agent_pkg
