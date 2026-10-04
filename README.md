@@ -83,3 +83,5 @@ estão no `flist_tb.f`.
           │  usb_fs_nb_pe (rx/tx, in/out PE)     │
           └──────────────────────────────────────┘
 ```
+![Diagrama simples para posteriomente ser modificado](esquema_simples.drawio.svg)
+
