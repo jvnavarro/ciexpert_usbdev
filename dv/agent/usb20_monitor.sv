@@ -14,7 +14,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
   endfunction
 
   // Task gerenciada pela classe pai dv_base_monitor
-  virtual protected task collect_trans(uvm_phase phase);
+  virtual protected task collect_trans();
     usb_transaction trans;
 
     forever begin
@@ -37,7 +37,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
   task wait_for_start_of_packet();
     @(posedge vif.clk_i);
     // Enquanto estiver em J-State (D+=1, D-=0), continua aguardando
-    while (vif.usb_dp_i == 1'b1 && vif.usb_dn_i == 1'b0) begin
+    while (vif.cio_usb_dp_i == 1'b1 && vif.cio_usb_dn_i == 1'b0) begin
       @(posedge vif.clk_i);
     end
   endtask
@@ -51,29 +51,29 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
     // 1. Amostra o byte de SYNC (8 bits, amostrando no meio de cada bit time: 2º ciclo do clock de 48MHz)
     for (int i = 0; i < 8; i++) begin
       repeat (2) @(posedge vif.clk_i);
-      sync_byte[i] = vif.usb_dp_i; // Lê o bit no pino D+
+      sync_byte[i] = vif.cio_usb_dp_i; // Lê o bit no pino D+
       repeat (2) @(posedge vif.clk_i);
     end
 
     // 2. Amostra o byte de PID (8 bits)
     for (int i = 0; i < 8; i++) begin
       repeat (2) @(posedge vif.clk_i);
-      pid_byte[i] = vif.usb_dp_i;
+      pid_byte[i] = vif.cio_usb_dp_i;
       repeat (2) @(posedge vif.clk_i);
     end
-    trans.pid = pid_byte[3:0]; // Extrai os 4 bits reais do PID (os 4 MSB são invertidos para check)
+    trans.pid = usb_transaction::usb_pid_e'(pid_byte[3:0]); // Extrai os 4 bits reais do PID (os 4 MSB são invertidos para check)
 
     // 3. Amostra os campos de ADDR (7b) + ENDP (4b) + CRC5 (5b) = 16 bits
     for (int i = 0; i < 16; i++) begin
       repeat (2) @(posedge vif.clk_i);
-      token_payload[i] = vif.usb_dp_i;
+      token_payload[i] = vif.cio_usb_dp_i;
       repeat (2) @(posedge vif.clk_i);
     end
     trans.addr = token_payload[6:0];
     trans.endp = token_payload[10:7];
 
     // 4. Aguarda a detecção do End of Packet (SE0: D+=0 e D-=0)
-    while (!(vif.usb_dp_i == 1'b0 && vif.usb_dn_i == 1'b0)) begin
+    while (!(vif.cio_usb_dp_i == 1'b0 && vif.cio_usb_dn_i == 1'b0)) begin
       @(posedge vif.clk_i);
     end
   endtask

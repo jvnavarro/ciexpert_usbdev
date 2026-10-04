@@ -11,6 +11,11 @@ class usbdev_env_cfg extends cip_base_env_cfg #(.RAL_T(usbdev_reg_block));
 
   usb20_agent_cfg m_usb20_agent_cfg;
 
+  // USB Full Speed: clock do usbdev fixo em 48 MHz (sobrescreve a constraint aleatoria da dv_base)
+  constraint clk_freq_mhz_c {
+    clk_freq_mhz == 48;
+  }
+
   function new(string name = "usbdev_env_cfg");
     super.new(name);
   endfunction
