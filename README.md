@@ -85,3 +85,36 @@ estão no `flist_tb.f`.
 ```
 ![Diagrama simples para posteriomente ser modificado](esquema_simples.drawio.svg)
 
+### Tabela de Mapeamento de Sinais e Registradores (`usbdev`)
+
+| Categoria | Nome Oficial OpenTitan | Tipo | Descrição |
+| --- | --- | --- | --- |
+| **Sinais de Interface** | `clk_i` | Signal | Clock principal do sistema |
+|  | `rst_ni` | Signal | Reset ativo em nível baixo |
+|  | `clk_aon_i` | Signal | Clock Always-On (utilizado no wake-up) |
+|  | `rst_aon_ni` | Signal | Reset Always-On |
+| **Interface USB** | `cio_usb_dp_i` / `cio_usb_dp_o` | Signal | Linha Data Plus (DP) - Entrada / Saída |
+|  | `cio_usb_dn_i` / `cio_usb_dn_o` | Signal | Linha Data Minus (DN) - Entrada / Saída |
+|  | `cio_usb_oe_o` | Signal | Output Enable do transceptor físico |
+|  | `cio_sense_i` | Signal | VBUS Sense (detecção de cabo conectado) |
+| **Registradores de Controle** | `intr_state` | Register | Estado das interrupções do módulo |
+|  | `intr_enable` | Register | Habilitação das interrupções |
+|  | `intr_test` | Register | Teste forçado de interrupções |
+|  | `usbctrl` | Register | Controle principal (`enable`, `pe_en`, `device_address`) |
+|  | `usbstat` | Register | Status da conexão (`connected`, `link_state`, `frame`) |
+| **Registradores do Smoke Test** | `ep_out_enable` | Register | Habilita endpoints de saída (OUT) |
+|  | `ep_in_enable` | Register | Habilita endpoints de entrada (IN) |
+|  | `rxenable_out` | Register | Habilita recepção nos endpoints OUT |
+| **Buffers e FIFOs** | `avoutfifo` *(corrigido)* | Register | FIFO para fornecer buffers disponíveis para pacotes OUT |
+|  | `avsetupfifo` *(corrigido)* | Register | FIFO para fornecer buffers disponíveis para pacotes SETUP |
+|  | `rxfifo` | Register | FIFO de leitura dos pacotes recebidos |
+
+---
+
+### Mapeamento dos Campos Principais do Registrador `usbctrl` (Validado)
+
+| Campo (`usbctrl`) | Descrição |
+| --- | --- |
+| `enable` | Liga/desliga a Posição Física do Módulo (PHY) |
+| `pe_en` | Habilita o Protocol Engine (mecanismo digital do USB) |
+| `device_address` | Endereço USB atribuído ao periférico (7 bits) |
