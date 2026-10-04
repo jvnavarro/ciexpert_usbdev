@@ -22,10 +22,15 @@ class usbdev_env extends cip_base_env #(
 
   virtual function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
+    
+    // Conecta o sequenciador do agente ao virtual sequencer
     if (cfg.m_usb20_agent_cfg.is_active) begin
       virtual_sequencer.usb20_sequencer_h = m_usb20_agent.sequencer;
     end
-    // no futuro ligaremos as portas TLM do m_usb20_agent ao scoreboard..
+    
+    // Conecta a porta de análise do monitor USB à FIFO do scoreboard
+    if (cfg.en_scb) begin
+      m_usb20_agent.monitor.analysis_port.connect(scoreboard.usb20_fifo);
+    end
   endfunction
-
 endclass

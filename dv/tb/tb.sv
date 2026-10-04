@@ -31,9 +31,7 @@ module tb;
     .rst_ni(rst_n)
   );
 
-  // Barramento USB em idle (J state: D+ alto, D- baixo) e VBUS presente
-  assign usb20_if_inst.cio_usb_dp_i = 1'b1;
-  assign usb20_if_inst.cio_usb_dn_i = 1'b0;
+  // D+/D- (cio_usb_d*_i) sao controlados pelo usb20_driver; VBUS sempre presente
   assign usb20_if_inst.cio_sense_i  = 1'b1;
 
   // DUT

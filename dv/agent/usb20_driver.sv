@@ -13,12 +13,18 @@ class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb
     end
   endfunction
 
+  // Barramento em repouso (J-State) durante/após o reset
+  virtual task on_enter_reset();
+    vif.cio_usb_dp_i <= 1'b1;
+    vif.cio_usb_dn_i <= 1'b0;
+  endtask
+
   //  em repouso (J-State)
   task drive_idle(int cycles);
     for (int i = 0; i < cycles; i++) begin
       @(posedge vif.clk_i);
-      vif.usb_dp_o <= 1'b1;
-      vif.usb_dn_o <= 1'b0;
+      vif.cio_usb_dp_i <= 1'b1;
+      vif.cio_usb_dn_i <= 1'b0;
     end
   endtask
 
@@ -28,12 +34,11 @@ class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb
     for (int i = 0; i < 8; i++) begin
       repeat (4) @(posedge vif.clk_i); // Cada bit time dura 4 ciclos de clock (48MHz / 4 = 12MHz)
       if (sync_pattern[i]) begin
-        vif.usb_dp_o <= 1'b1; // Bit 1 -> J-State
-        vif.usb_dn_o <= 1 me;
-        vif.usb_dn_o <= 1'b0;
+        vif.cio_usb_dp_i <= 1'b1; // Bit 1 -> J-State
+        vif.cio_usb_dn_i <= 1'b0;
       end else begin
-        vif.usb_dp_o <= 1'b0; // Bit 0 -> K-State
-        vif.usb_dn_o <= 1'b1;
+        vif.cio_usb_dp_i <= 1'b0; // Bit 0 -> K-State
+        vif.cio_usb_dn_i <= 1'b1;
       end
     end
   endtask
@@ -43,16 +48,16 @@ class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb
     bit [23:0] pkt_bits; // Guarda PID (8b) + ADDR (7b) + ENDP (4b) + CRC5 (5b)
     
     // Montagem simplificada dos bits do Token (LSB primeiro)
-    pkt_bits = {5'h00, req.endp, req.addr, req.pid}; 
+    pkt_bits = {5'h00, req.endp, req.addr, ~req.pid, req.pid}; // PID = {~pid, pid}
 
     for (int i = 0; i < 24; i++) begin
       repeat (4) @(posedge vif.clk_i);
       if (pkt_bits[i]) begin
-        vif.usb_dp_o <= 1'b1;
-        vif.usb_dn_o <= 1'b0;
+        vif.cio_usb_dp_i <= 1'b1;
+        vif.cio_usb_dn_i <= 1'b0;
       end else begin
-        vif.usb_dp_o <= 1'b0;
-        vif.usb_dn_o <= 1'b1;
+        vif.cio_usb_dp_i <= 1'b0;
+        vif.cio_usb_dn_i <= 1'b1;
       end
     end
   endtask
@@ -61,13 +66,13 @@ class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb
   task drive_eop();
     // SE0 por 2 bit times (2 * 4 ciclos de clock)
     repeat (8) @(posedge vif.clk_i) begin
-      vif.usb_dp_o <= 1'b0;
-      vif.usb_dn_o <= 1'b0;
+      vif.cio_usb_dp_i <= 1'b0;
+      vif.cio_usb_dn_i <= 1'b0;
     end
     // Retorno ao J-State por 1 bit time (4 ciclos)
     repeat (4) @(posedge vif.clk_i) begin
-      vif.usb_dp_o <= 1'b1;
-      vif.usb_dn_o <= 1'b0;
+      vif.cio_usb_dp_i <= 1'b1;
+      vif.cio_usb_dn_i <= 1'b0;
     end
   endtask
 

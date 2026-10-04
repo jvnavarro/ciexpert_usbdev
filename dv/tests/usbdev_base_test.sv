@@ -1,7 +1,6 @@
 class usbdev_base_test extends cip_base_test #(
-  .ENV_T(usbdev_env), 
   .CFG_T(usbdev_env_cfg),
-  .VSQR_T(usbdev_virtual_sequencer)
+  .ENV_T(usbdev_env)
 );
   `uvm_component_utils(usbdev_base_test)
 

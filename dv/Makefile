@@ -22,6 +22,7 @@ SEED        ?= 1
 WAVE        ?= 0
 GUI         ?= 0
 PLUSARGS    ?=
+COV         ?= 1
 
 # Ferramentas (carregadas via 'module load vcs verdi' se nao estiverem no PATH)
 VCS_MODULE  ?= vcs/W-2024.09-SP2-3
@@ -49,6 +50,14 @@ ifeq ($(WAVE), 1)
   VCS_FLAGS += +define+DUMP_FSDB
 endif
 
+# Cobertura de codigo (line/cond/fsm/tgl/branch/assert) restrita ao DUT (cov_hier.cfg)
+COV_METRICS = line+cond+fsm+tgl+branch+assert
+COV_DB      = $(OUT_DIR)/simv.vdb
+COV_REPORT  = $(OUT_DIR)/urg_report
+ifeq ($(COV), 1)
+  VCS_FLAGS += -cm $(COV_METRICS) -cm_hier $(CURDIR)/cov_hier.cfg -cm_dir $(COV_DB)
+endif
+
 # Flags de execucao
 SIM_LOG     = $(OUT_DIR)/sim_$(TEST_SEQ)_$(SEED).log
 SIMV_FLAGS  = +UVM_TESTNAME=$(TEST)
@@ -58,6 +67,11 @@ SIMV_FLAGS += +ntb_random_seed=$(SEED)
 SIMV_FLAGS += +UVM_NO_RELNOTES
 SIMV_FLAGS += -l $(SIM_LOG)
 SIMV_FLAGS += $(PLUSARGS)
+
+# Cada execucao vira um teste separado no simv.vdb (o urg faz o merge de todos)
+ifeq ($(COV), 1)
+  SIMV_FLAGS += -cm $(COV_METRICS) -cm_dir $(COV_DB) -cm_name $(TEST_SEQ)_$(SEED)
+endif
 
 ifeq ($(GUI), 1)
   SIMV_FLAGS += -gui=verdi
@@ -70,7 +84,7 @@ ENV_SETUP   = if ! command -v $(VCS) >/dev/null 2>&1; then \
 
 SHELL       := /bin/bash
 
-.PHONY: all compile sim run smoke wave clean help
+.PHONY: all compile sim run smoke cov cov_gui wave clean help
 
 all: run
 
@@ -89,6 +103,16 @@ sim:
 	@grep -q "TEST PASSED CHECKS" $(SIM_LOG) && echo ">>> $(TEST_SEQ) (seed $(SEED)): PASSED" || \
 	  { echo ">>> $(TEST_SEQ) (seed $(SEED)): FAILED - veja $(SIM_LOG)"; exit 1; }
 
+# Relatorio de cobertura (HTML + texto) com o merge de todas as execucoes em simv.vdb
+cov:
+	@test -d $(COV_DB) || { echo ">>> [ERRO] $(COV_DB) nao encontrado. Rode com COV=1."; exit 1; }
+	@$(ENV_SETUP); cd $(OUT_DIR) && urg -full64 -dir $(COV_DB) -report $(COV_REPORT) -format both -log $(OUT_DIR)/urg.log
+	@echo ">>> Relatorio salvo em $(COV_REPORT) (abra dashboard.html no navegador ou veja dashboard.txt)"
+	@cat $(COV_REPORT)/dashboard.txt
+
+cov_gui:
+	@$(ENV_SETUP); $(VERDI) -cov -covdir $(COV_DB) &
+
 wave:
 	@$(ENV_SETUP); cd $(OUT_DIR) && $(VERDI) -ssf sim_waves.fsdb &
 
@@ -96,4 +120,4 @@ clean:
 	rm -rf $(OUT_DIR)
 
 help:
-	@echo "make [run|compile|sim|smoke|wave|clean] [TEST=$(TEST)] [TEST_SEQ=$(TEST_SEQ)] [SEED=$(SEED)] [VERBOSITY=$(VERBOSITY)] [WAVE=0|1] [GUI=0|1] [PLUSARGS=...]"
+	@echo "make [run|compile|sim|smoke|cov|cov_gui|wave|clean] [TEST=$(TEST)] [TEST_SEQ=$(TEST_SEQ)] [SEED=$(SEED)] [VERBOSITY=$(VERBOSITY)] [WAVE=0|1] [GUI=0|1] [COV=0|1] [PLUSARGS=...]"
