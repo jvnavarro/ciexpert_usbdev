@@ -5,12 +5,10 @@ class usbdev_env_cov extends cip_base_env_cov #(
 
   `uvm_component_utils(usbdev_env_cov)
 
-  // 2. Construtor padrão de componente 
   function new(string name = "usbdev_env_cov", uvm_component parent = null);
     super.new(name, parent);
   endfunction
 
-  // 3. Fase de construção onde os covergroups serão instanciados no futuro
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
   endfunction

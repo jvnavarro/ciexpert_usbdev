@@ -1,28 +1,19 @@
-class usbdev_scoreboard extends cip_base_scoreboard #(
-  .CFG_T(usbdev_env_cfg),
-  .BASE_REG_BLK_T(dv_base_reg_block),
-  .COV_T(usbdev_env_cov)
-);
-
-  // 1. Registo na fábrica do UVM
+class usbdev_scoreboard extends cip_base_scoreboard #( .CFG_T(usbdev_env_cfg),.BASE_REG_BLK_T(dv_base_reg_block),.COV_T(usbdev_env_cov));
   `uvm_component_utils(usbdev_scoreboard)
 
-  // 2. Construtor padrão
   function new(string name = "usbdev_scoreboard", uvm_component parent = null);
     super.new(name, parent);
   endfunction
 
-  // 3. Fase de construção
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
   endfunction
 
-  // 4. Fase de conexão
   virtual function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
   endfunction
 
-  // 5. Acessos TL-UL: obrigatorio sobrescrever (a classe base da CIP da fatal se chamada).
+  // Acessos TL-UL: obrigatorio sobrescrever (a classe base da CIP da fatal se chamada).
   //    Checagens dos CSRs serao implementadas no futuro.
   virtual task process_tl_access(tl_seq_item item, tl_channels_e channel, string ral_name);
   endtask

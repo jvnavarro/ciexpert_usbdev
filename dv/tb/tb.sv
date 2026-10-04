@@ -100,7 +100,7 @@ module tb;
     .intr_av_setup_empty_o        (interrupts[17])
   );
 
-  assign interrupts[NUM_MAX_INTERRUPTS-1:18] = '0;
+  //assign interrupts[NUM_MAX_INTERRUPTS-1:18] = '0;
 
   // Ponte UVM: publica as interfaces e inicia a simulação
   initial begin
