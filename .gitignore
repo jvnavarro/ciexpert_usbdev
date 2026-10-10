@@ -19,3 +19,7 @@ verdi*
 novas*
 *.conf
 *.rc
+
+# Verdi (logs e arquivos temporarios)
+vdCovLog/
+.fsm.sch.verilog.xml

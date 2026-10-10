@@ -64,7 +64,7 @@
 ### `dv/tests/` (Virtual Sequences e Testes)
 *   `usbdev_base_test`: Teste raiz. A Virtual Sequence executada é definida por argumento de compilação (`TEST_SEQ`).
 *   `usbdev_base_vseq`: Realiza inicialização (`dut_init`) via TL-UL (RAL): configura `usbctrl.enable=1`, `device_address=0x12` e `ep_out_enable[0]=1`.
-*   `usbdev_smoke_vseq`: Exemplo inicial que executa a `usb20_basic_seq` diretamente no agente.
+*   `usbdev_vseq_list`: Lista das vseqs incluída pelo `usbdev_env_pkg`. Cada colaborador cria sua vseq na própria branch e adiciona uma linha de include no final da lista.
 
 ### `dv/tb/` (Testbench Top)
 *   `tb.sv`: Instanciação do DUT e conexão das interfaces (clock/reset, barramento TL-UL, alertas, interrupções e `usb20_if`).
@@ -119,7 +119,7 @@ make wave            # Abre o Verdi com o arquivo gerado
 **Como criar um novo cenário de teste:**
 1. Crie o arquivo `dv/tests/usbdev_<nome>_vseq.sv` estendendo `usbdev_base_vseq`.
 2. Implemente a lógica principal dentro da `task body()`.
-3. Inclua o novo arquivo no pacote do ambiente (`dv/env/usbdev_env_pkg.sv`).
+3. Inclua o novo arquivo no final da lista de vseqs (`dv/tests/usbdev_vseq_list.sv`).
 4. Execute passando o nome da sequência: `make compile && make sim TEST_SEQ=usbdev_<nome>_vseq`.
 
 
