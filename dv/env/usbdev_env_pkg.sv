@@ -29,5 +29,5 @@ package usbdev_env_pkg;
   // Sequencias virtuais
   `include "usbdev_base_vseq.sv"
   `include "usbdev_smoke_vseq.sv"
-
+  `include "usbdev_in_trans_vseq.sv"
 endpackage : usbdev_env_pkg
