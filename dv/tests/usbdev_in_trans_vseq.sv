@@ -8,10 +8,16 @@ endfunction
 
 virtual task body();
 	uvm_reg_data_t valor_lido;
-
-	`uvm_info(get_type_name(),
-		"Iniciando teste in_trans",
-		UVM_LOW)
+	usb20_basic_seq m_usb20_seq;
+	virtual usb20_if usb_vif;
+	if(!uvm_config_db#(virtual usb20_if)::get(
+	null, "uvm_test_top.env.m_usb20_agent.driver", "vif", usb_vif)) begin
+	`uvm_fatal(get_type_name(), "ETAPA 9: Nao foi possivel obter a interface USB")
+end
+`uvm_info(get_type_name(),
+	"Iniciando teste in_trans",
+	UVM_LOW)
+dut_init();
 // Etapa 1: ler o registrador in_sent
 csr_rd(.ptr(ral.in_sent[0]), .value(valor_lido));
 
@@ -93,6 +99,73 @@ else begin
 	`uvm_info(get_type_name(),
 		"PASS: segunda palavra do buffer correta",
 		UVM_LOW)
+end
+// Etapa 6: Habilitar o endpoint 2 para transacoes IN
+csr_wr(.ptr(ral.ep_in_enable[0]), .value(32'h00000004));
+csr_rd(.ptr(ral.ep_in_enable[0]), .value(valor_lido));
+if(valor_lido !== 32'h00000004) begin
+	`uvm_error(get_type_name(),
+		$sformatf("Falha ao habilitar enpoint 2: 0x0%08h", valor_lido))
+end
+else begin
+	`uvm_info(get_type_name(),
+		"PASS: endpoint 2 habilitado parac IN", UVM_LOW)
+end
+//Etapa 7 : Preparar a transmissão IN do endpoint 2
+// Buffer 0, tamanho 8 bytes, rdy = 1
+csr_wr(.ptr(ral.configin[2]), .value(32'h80000800));
+csr_rd(.ptr(ral.configin[2]), .value(valor_lido));
+if (valor_lido !== 32'h80000800) begin
+	`uvm_error(get_type_name(),
+		$sformatf(" Falha ao configurar IN do ednpoint 2: 0x%08h", valor_lido))
+end 
+else begin
+	`uvm_info(get_type_name(),
+		"PASS: endpoint 2 pronto para transmitir 8 bytes", UVM_LOW)
+end
+csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
+`uvm_info(get_type_name(),
+	$sformatf("DEBUG USBCTRL: 0x%08h", valor_lido), UVM_LOW)
+// Habilitar controlador USB e configuarar seu endereco 
+csr_wr(.ptr(ral.usbctrl.enable), .value(1'b1));
+csr_wr(.ptr(ral.usbctrl.device_address), .value(7'h12));
+// Confirmar configuracao 
+csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
+`uvm_info(get_type_name(),
+	$sformatf(" USBCTRL configurado: 0x%08h", valor_lido), UVM_LOW)
+// Etapa 8: Iniciar a sequencia USB 2.0
+m_usb20_seq = usb20_basic_seq::type_id::create("m_usb20_seq");
+m_usb20_seq.enviar_in_ep2 = 1;
+	`uvm_info(get_type_name(),
+		"Iniciando sequencia USB para teste IN", UVM_LOW)
+// Etapa 9: Verificar se o DUT habilita sua saída USB
+// Aguarda ate 2000 ciclos de clock por uma resposta do DUT
+begin
+bit resposta_detectada = 0;
+
+fork
+begin
+m_usb20_seq.start(p_sequencer.usb20_sequencer_h);
+end
+
+begin
+for(int i = 0; i < 2000; i++) begin
+	@(posedge usb_vif.clk_i);
+	if(usb_vif.cio_usb_oe_o === 1'b1) begin
+		resposta_detectada = 1;
+		break;
+		end
+	end
+end
+join
+	if(resposta_detectada) begin
+	`uvm_info(get_type_name(),
+	"ETAPA 9: DUT habilitou a saída USB", UVM_LOW)
+	end
+	else begin
+	`uvm_error(get_type_name(),
+	"ETAPA 9: DUT nao habilitou a saída USB")
+	end
 end
 endtask
 endclass

@@ -1,6 +1,7 @@
 class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb20_agent_cfg));
   `uvm_component_utils(usb20_driver)
   virtual usb20_if vif;
+  bit nrzi_state;
 
   function new(string name = "usb20_driver", uvm_component parent = null);
     super.new(name, parent);
@@ -30,35 +31,48 @@ class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb
 
   // enviar o padrão SYNC de sincronização (8'h80 = 8'b10000000)
   task drive_sync();
-    bit [7:0] sync_pattern = 8'h80;
-    for (int i = 0; i < 8; i++) begin
-      repeat (4) @(posedge vif.clk_i); // Cada bit time dura 4 ciclos de clock (48MHz / 4 = 12MHz)
-      if (sync_pattern[i]) begin
-        vif.cio_usb_dp_i <= 1'b1; // Bit 1 -> J-State
-        vif.cio_usb_dn_i <= 1'b0;
-      end else begin
-        vif.cio_usb_dp_i <= 1'b0; // Bit 0 -> K-State
-        vif.cio_usb_dn_i <= 1'b1;
-      end
+    bit [7:0] sync_bits = 8'b10000000;
+// O pacote USB começa no estado J
+nrzi_state = 1'b1;
+for(int i=0; i<8; i++) begin
+	repeat (4) @(posedge vif.clk_i);
+// nrzi: zero inverte o estado; um mantém. 
+if (sync_bits[i] == 1'b0)
+	nrzi_state = ~nrzi_state;
+	vif.cio_usb_dp_i <= nrzi_state;
+	vif.cio_usb_dn_i <= ~nrzi_state;
+
+
     end
   endtask
 
   //  serializar e enviar os campos do pacote
   task drive_packet(usb_transaction req);
     bit [23:0] pkt_bits; // Guarda PID (8b) + ADDR (7b) + ENDP (4b) + CRC5 (5b)
-    
-    // Montagem simplificada dos bits do Token (LSB primeiro)
-    pkt_bits = {5'h00, req.endp, req.addr, ~req.pid, req.pid}; // PID = {~pid, pid}
-
+    bit[4:0] crc5;
+    bit [10:0] token_bits;
+    bit feedback;
+    // CRC5 USB: polinomio x⁵ + x² +1
+// calculado sobre ADDR (7 bits) e ENDP (4 bits)
+token_bits = {req.endp, req.addr};
+crc5 = 5'b11111;
+for (int j = 0; j<11; j++) begin
+feedback = token_bits[j] ^ crc5[0];
+if(feedback)
+	crc5 = crc5 ^ 5'b10100;
+end
+crc5 = ~crc5;
+//montagem do token com CRC5 calculado 
+pkt_bits = {crc5, req.endp, req.addr, ~req.pid, req.pid};
+//Estado inicial NRZI: J-State (D+ = 1, D- = 0)
     for (int i = 0; i < 24; i++) begin
       repeat (4) @(posedge vif.clk_i);
-      if (pkt_bits[i]) begin
-        vif.cio_usb_dp_i <= 1'b1;
-        vif.cio_usb_dn_i <= 1'b0;
-      end else begin
-        vif.cio_usb_dp_i <= 1'b0;
-        vif.cio_usb_dn_i <= 1'b1;
-      end
+// NRZI: bit 0 inverte o estado; bit 1 mantém
+      if (pkt_bits[i] == 1'b0)
+		nrzi_state = ~nrzi_state;
+// Aplica o estado NRZI nas linhas USB
+vif.cio_usb_dp_i <= nrzi_state;
+vif.cio_usb_dn_i <= ~nrzi_state;
     end
   endtask
 
@@ -78,8 +92,9 @@ class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb
 
   // Método gerenciado pelo dv_base_driver - não mexemos no run_phase
   virtual task get_and_drive();
+	`uvm_info(get_type_name(), "DEBUG: get_and_drive iniciou", UVM_NONE)
     drive_idle(10); // Inicializa o barramento em idle
-
+	`uvm_info(get_type_name(), "DEBUG: drive_idle terminou; aguardando transacao", UVM_NONE)
     forever begin
       seq_item_port.get_next_item(req);
       
