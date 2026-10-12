@@ -10,6 +10,7 @@ virtual task body();
 	uvm_reg_data_t valor_lido;
 	usb20_basic_seq m_usb20_seq;
 	virtual usb20_if usb_vif;
+	uvm_status_e usbctrl_status;
 	if(!uvm_config_db#(virtual usb20_if)::get(
 	null, "uvm_test_top.env.m_usb20_agent.driver", "vif", usb_vif)) begin
 	`uvm_fatal(get_type_name(), "ETAPA 9: Nao foi possivel obter a interface USB")
@@ -126,13 +127,28 @@ end
 csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
 `uvm_info(get_type_name(),
 	$sformatf("DEBUG USBCTRL: 0x%08h", valor_lido), UVM_LOW)
-// Habilitar controlador USB e configuarar seu endereco 
+// Habilitar controlador USB e configuarar seu endereco
+ `uvm_info(get_type_name(), 
+        $sformatf(" DEBUG UNDER_RESET: %0b", csr_utils_pkg::under_reset), UVM_LOW) 
+
 csr_wr(.ptr(ral.usbctrl.enable), .value(1'b1));
 csr_wr(.ptr(ral.usbctrl.device_address), .value(7'h12));
+`uvm_info(get_type_name(),
+	$sformatf("DEBUG RAL USBCTRL: 0x%08h", ral.usbctrl.get_mirrored_value()), UVM_LOW)
 // Confirmar configuracao 
 csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
 `uvm_info(get_type_name(),
 	$sformatf(" USBCTRL configurado: 0x%08h", valor_lido), UVM_LOW)
+ral.usbctrl.write(
+	.status(usbctrl_status),
+	.value(32'h00120001),
+	.parent(this)
+);
+`uvm_info(get_type_name(),
+	$sformatf(" DEBUG USBCTRL WRITE STATUS: %s", usbctrl_status.name()),UVM_LOW)
+csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
+`uvm_info(get_type_name(),
+	$sformatf("DEBUG USBCTRL APOS WRITE DIRETO: 0x%08h", valor_lido), UVM_LOW)
 // Etapa 8: Iniciar a sequencia USB 2.0
 m_usb20_seq = usb20_basic_seq::type_id::create("m_usb20_seq");
 m_usb20_seq.enviar_in_ep2 = 1;
@@ -146,12 +162,23 @@ bit resposta_detectada = 0;
 fork
 begin
 m_usb20_seq.start(p_sequencer.usb20_sequencer_h);
+`uvm_info(get_type_name(),
+	"DEBUG ETAPA 9: transmissao do token IN concluida", UVM_LOW)
 end
 
 begin
 for(int i = 0; i < 2000; i++) begin
 	@(posedge usb_vif.clk_i);
-	if(usb_vif.cio_usb_oe_o === 1'b1) begin
+	if(i<20) begin
+		`uvm_info(get_type_name(),
+			$sformatf(" DEBUG ETAPA 9: ciclo=%0d DP_EN=%b DN_EN=%b", 
+			i, 
+			usb_vif.cio_usb_dp_en_o,
+			usb_vif.cio_usb_dn_en_o),
+			UVM_LOW)
+	end
+	if((usb_vif.cio_usb_dp_en_o === 1'b1) ||
+	(usb_vif.cio_usb_dn_en_o === 1'b1))  begin
 		resposta_detectada = 1;
 		break;
 		end

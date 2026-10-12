@@ -35,46 +35,52 @@ class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb
 // O pacote USB começa no estado J
 nrzi_state = 1'b1;
 for(int i=0; i<8; i++) begin
-	repeat (4) @(posedge vif.clk_i);
-// nrzi: zero inverte o estado; um mantém. 
-if (sync_bits[i] == 1'b0)
-	nrzi_state = ~nrzi_state;
+	if (sync_bits[i] == 1'b0)
+		nrzi_state = ~nrzi_state;
+
 	vif.cio_usb_dp_i <= nrzi_state;
 	vif.cio_usb_dn_i <= ~nrzi_state;
-
-
-    end
-  endtask
-
+	repeat (4) @(posedge vif.clk_i);
+	end
+endtask
   //  serializar e enviar os campos do pacote
   task drive_packet(usb_transaction req);
-    bit [23:0] pkt_bits; // Guarda PID (8b) + ADDR (7b) + ENDP (4b) + CRC5 (5b)
-    bit[4:0] crc5;
+    bit [23:0] pkt_bits;
+    bit [4:0] crc5;
     bit [10:0] token_bits;
     bit feedback;
-    // CRC5 USB: polinomio x⁵ + x² +1
-// calculado sobre ADDR (7 bits) e ENDP (4 bits)
-token_bits = {req.endp, req.addr};
-crc5 = 5'b11111;
-for (int j = 0; j<11; j++) begin
-feedback = token_bits[j] ^ crc5[0];
-if(feedback)
-	crc5 = crc5 ^ 5'b10100;
-end
-crc5 = ~crc5;
-//montagem do token com CRC5 calculado 
-pkt_bits = {crc5, req.endp, req.addr, ~req.pid, req.pid};
-//Estado inicial NRZI: J-State (D+ = 1, D- = 0)
-    for (int i = 0; i < 24; i++) begin
-      repeat (4) @(posedge vif.clk_i);
-// NRZI: bit 0 inverte o estado; bit 1 mantém
-      if (pkt_bits[i] == 1'b0)
-		nrzi_state = ~nrzi_state;
-// Aplica o estado NRZI nas linhas USB
-vif.cio_usb_dp_i <= nrzi_state;
-vif.cio_usb_dn_i <= ~nrzi_state;
+
+    // CRC5 sobre ADDR (7 bits) e ENDP (4 bits)
+    token_bits = {req.endp, req.addr};
+    crc5 = 5'b11111;
+
+    for (int j = 0; j < 11; j++) begin
+        feedback = token_bits[j] ^ crc5[0];
+        crc5 = crc5 >> 1;
+
+        if (feedback)
+            crc5 = crc5 ^ 5'b10100;
     end
-  endtask
+
+    crc5 = ~crc5;
+`uvm_info(get_type_name(),
+	$sformatf("DEBUG TOKEN: ADDR=0x%02h ENDP=0x%02h CRC5=x%02h",
+	req.addr, req.endp, crc5), UVM_LOW)
+
+    // PID + endereco + endpoint + CRC5
+    pkt_bits = {crc5, req.endp, req.addr, ~req.pid, req.pid};
+
+    // Transmissao NRZI
+    for (int i = 0; i < 24; i++) begin
+        if (pkt_bits[i] == 1'b0)
+            nrzi_state = ~nrzi_state;
+
+        vif.cio_usb_dp_i <= nrzi_state;
+        vif.cio_usb_dn_i <= ~nrzi_state;
+
+        repeat (4) @(posedge vif.clk_i);
+    end
+endtask
 
   // sinalizar fim de pacote (EOP)
   task drive_eop();
