@@ -12,7 +12,16 @@ class usb_transaction extends uvm_sequence_item;
     PID_NAK   = 4'b1010,
     PID_STALL = 4'b1110
   } usb_pid_e;
+  // Tipos de transação para o Driver
+  typedef enum bit [1:0] {
+    USB_ITEM_NORMAL,
+    USB_ITEM_BUS_RESET,
+    USB_ITEM_IDLE
+  } item_kind_e;
 
+  rand item_kind_e kind;
+  rand int unsigned reset_us;
+  rand int unsigned idle_bits;
   // Campos de cabeçalho
   rand usb_pid_e pid;
   rand bit [6:0] addr;
@@ -20,7 +29,7 @@ class usb_transaction extends uvm_sequence_item;
 
   // NOVO: Array dinâmico para carregar o payload de dados
   rand byte data[];
-
+  rand bit [10:0] frame_num;
   // ---------------------------------------------------------
   // CONSTRAINTS (Regras de valores mínimos, máximos e lógicos)
   // ---------------------------------------------------------
@@ -42,17 +51,42 @@ class usb_transaction extends uvm_sequence_item;
     }
   }
 
-  // 1. Registro da classe na fábrica do UVM (UVM Factory)
+  // Regra 4: Limites dos itens de controle (o DUT detecta reset após ~3 us de SE0)
+  constraint c_reset_us {
+    reset_us inside {[5:20]};
+  }
+
+  constraint c_idle_bits {
+    idle_bits inside {[1:100]};
+  }
+
   `uvm_object_utils_begin(usb_transaction)
+    `uvm_field_enum(item_kind_e, kind, UVM_DEFAULT)
     `uvm_field_enum(usb_pid_e, pid, UVM_DEFAULT)
     `uvm_field_int(addr, UVM_DEFAULT)
     `uvm_field_int(endp, UVM_DEFAULT)
-    `uvm_field_array_int(data, UVM_DEFAULT) // Adiciona o array à fábrica
+    `uvm_field_int(frame_num, UVM_DEFAULT)
+    `uvm_field_array_int(data, UVM_DEFAULT)
+    `uvm_field_int(reset_us, UVM_DEFAULT)
+    `uvm_field_int(idle_bits, UVM_DEFAULT)
   `uvm_object_utils_end
 
   // 2. Construtor padrão
   function new(string name = "usb_transaction");
     super.new(name);
   endfunction
+// Retorna 1 se for um pacote Token (IN, OUT, SETUP)
+  function bit is_token();
+    return (pid == PID_IN || pid == PID_OUT || pid == PID_SETUP);
+  endfunction
 
+  // Retorna 1 se for um pacote de Dados (DATA0, DATA1)
+  function bit is_data();
+    return (pid == PID_DATA0 || pid == PID_DATA1);
+  endfunction
+
+  // Retorna 1 se for um Start of Frame
+  function bit is_sof();
+    return (pid == PID_SOF);
+  endfunction
 endclass

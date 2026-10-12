@@ -8,3 +8,4 @@
 //
 // A usbdev_base_vseq precisa ser a primeira (todas as outras estendem dela).
 `include "usbdev_base_vseq.sv"
+`include "usbdev_smoke_vseq.sv"
