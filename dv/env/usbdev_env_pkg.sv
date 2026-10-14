@@ -26,7 +26,7 @@ package usbdev_env_pkg;
   `include "usbdev_scoreboard.sv"
   `include "usbdev_env.sv"
 
-  // Sequencias virtuais (lista em tests/usbdev_vseq_list.sv)
+  // Sequencias virtuais (lista em tests/seq_lib/usbdev_vseq_list.sv)
   `include "usbdev_vseq_list.sv"
 
 endpackage : usbdev_env_pkg
