@@ -54,6 +54,7 @@ endif
 COV_METRICS = line+cond+fsm+tgl+branch+assert
 COV_DB      = $(OUT_DIR)/simv.vdb
 COV_REPORT  = $(OUT_DIR)/urg_report
+URG_FLAGS   ?= -lca -full64 +urg+lic+wait -show tests -grade index testfile -group ratio -group lrm_bin_name -group instcov_for_score
 ifeq ($(COV), 1)
   VCS_FLAGS += -cm $(COV_METRICS) -cm_hier $(CURDIR)/cov_hier.cfg -cm_dir $(COV_DB)
 endif
@@ -106,7 +107,7 @@ sim:
 # Relatorio de cobertura (HTML + texto) com o merge de todas as execucoes em simv.vdb
 cov:
 	@test -d $(COV_DB) || { echo ">>> [ERRO] $(COV_DB) nao encontrado. Rode com COV=1."; exit 1; }
-	@$(ENV_SETUP); cd $(OUT_DIR) && urg -full64 -dir $(COV_DB) -report $(COV_REPORT) -format both -log $(OUT_DIR)/urg.log
+	@$(ENV_SETUP); cd $(OUT_DIR) && urg $(URG_FLAGS) -dir $(COV_DB) -report $(COV_REPORT) -format both -log $(OUT_DIR)/urg.log
 	@echo ">>> Relatorio salvo em $(COV_REPORT) (abra dashboard.html no navegador ou veja dashboard.txt)"
 	@cat $(COV_REPORT)/dashboard.txt
 

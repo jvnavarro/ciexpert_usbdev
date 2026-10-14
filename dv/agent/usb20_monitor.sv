@@ -16,6 +16,8 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
   // Task gerenciada pela classe pai dv_base_monitor
   virtual protected task collect_trans();
     usb_transaction trans;
+    bit current_dir_in = 1'b0;
+    bit [3:0] current_endp = 4'h0;
 
     forever begin
       // 1. Aguarda a linha sair do J-State (D+=1, D-=0) para detectar o início do pacote
@@ -26,6 +28,20 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
 
       // 3. Coleta os bytes do barramento (PID, ADDR, ENDP)
       collect_packet(trans);
+
+      // No protocolo USB, pacotes DATA e Handshakes herdam a direcao e o EP do Token anterior
+      if (trans.pid == usb_transaction::PID_IN) begin
+        current_dir_in = 1'b1;
+        current_endp   = trans.endp;
+        trans.dir_in   = 1'b1;
+      end else if (trans.pid inside {usb_transaction::PID_OUT, usb_transaction::PID_SETUP}) begin
+        current_dir_in = 1'b0;
+        current_endp   = trans.endp;
+        trans.dir_in   = 1'b0;
+      end else begin
+        trans.dir_in   = current_dir_in;
+        trans.endp     = current_endp;
+      end
 
       // 4. Imprime no log e envia para o Scoreboard
       `uvm_info(`gfn, {"TRACE: Pacote capturado pelo Monitor:\n", trans.sprint()}, UVM_LOW)

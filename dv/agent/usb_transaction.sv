@@ -10,13 +10,15 @@ class usb_transaction extends uvm_sequence_item;
     PID_DATA1 = 4'b1011,
     PID_ACK   = 4'b0010,
     PID_NAK   = 4'b1010,
-    PID_STALL = 4'b1110
+    PID_STALL = 4'b1110,
+    PID_PRE   = 4'b1100
   } usb_pid_e;
 
   // Campos de cabeçalho
   rand usb_pid_e pid;
   rand bit [6:0] addr;
   rand bit [3:0] endp;
+  rand bit       dir_in; // 0 = OUT, 1 = IN
 
   // NOVO: Array dinâmico para carregar o payload de dados
   rand byte data[];
@@ -42,17 +44,30 @@ class usb_transaction extends uvm_sequence_item;
     }
   }
 
+
+
   // 1. Registro da classe na fábrica do UVM (UVM Factory)
   `uvm_object_utils_begin(usb_transaction)
     `uvm_field_enum(usb_pid_e, pid, UVM_DEFAULT)
     `uvm_field_int(addr, UVM_DEFAULT)
     `uvm_field_int(endp, UVM_DEFAULT)
+    `uvm_field_int(dir_in, UVM_DEFAULT)
     `uvm_field_array_int(data, UVM_DEFAULT) // Adiciona o array à fábrica
   `uvm_object_utils_end
 
   // 2. Construtor padrão
   function new(string name = "usb_transaction");
     super.new(name);
+  endfunction
+
+  // Funções auxiliares
+  // 1. Retorna 1 se o pacote for do fluxo IN (DUT -> Host)
+  function bit is_in();
+    return (pid inside {PID_IN}) || dir_in;
+  endfunction
+  // 2. Retorna 1 se for pacote de dados
+  function bit is_data();
+    return (pid inside {PID_DATA0, PID_DATA1});
   endfunction
 
 endclass
