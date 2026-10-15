@@ -30,6 +30,11 @@ class usb_transaction extends uvm_sequence_item;
   // NOVO: Array dinâmico para carregar o payload de dados
   rand byte data[];
   rand bit [10:0] frame_num;
+
+  // Preenchidos pelo agente (não randomizados):
+  bit want_rsp;    // req: 1 = a sequência quer a resposta do DUT (vai chamar get_response)
+  bit no_response; // rsp do driver: 1 = o DUT não respondeu a tempo
+  bit from_device; // monitor: 1 = pacote enviado pelo DUT, 0 = pelo host
   // ---------------------------------------------------------
   // CONSTRAINTS (Regras de valores mínimos, máximos e lógicos)
   // ---------------------------------------------------------
@@ -69,6 +74,9 @@ class usb_transaction extends uvm_sequence_item;
     `uvm_field_array_int(data, UVM_DEFAULT)
     `uvm_field_int(reset_us, UVM_DEFAULT)
     `uvm_field_int(idle_bits, UVM_DEFAULT)
+    `uvm_field_int(want_rsp, UVM_DEFAULT)
+    `uvm_field_int(no_response, UVM_DEFAULT)
+    `uvm_field_int(from_device, UVM_DEFAULT)
   `uvm_object_utils_end
 
   // 2. Construtor padrão
@@ -88,5 +96,11 @@ class usb_transaction extends uvm_sequence_item;
   // Retorna 1 se for um Start of Frame
   function bit is_sof();
     return (pid == PID_SOF);
+  endfunction
+
+  // Retorna 1 se o host, depois de enviar este pacote, espera resposta do device:
+  // DATA -> handshake (ACK/NAK/STALL); IN -> DATA ou handshake
+  function bit expects_response();
+    return (is_data() || pid == PID_IN);
   endfunction
 endclass

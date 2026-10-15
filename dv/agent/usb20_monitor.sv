@@ -19,11 +19,17 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
     end
   endfunction
 
-  // Estados da linha. Todas as leituras dos pinos passam por aqui,
-  // entao para monitorar tambem o DUT (passo 5) basta mudar estas funcoes.
-  function bit line_is_j();   return (vif.cio_usb_dp_i == 1'b1 && vif.cio_usb_dn_i == 1'b0); endfunction
-  function bit line_is_k();   return (vif.cio_usb_dp_i == 1'b0 && vif.cio_usb_dn_i == 1'b1); endfunction
-  function bit line_is_se0(); return (vif.cio_usb_dp_i == 1'b0 && vif.cio_usb_dn_i == 1'b0); endfunction
+  // Pinos do barramento. No tb as duas direções são fios separados: quando o DUT
+  // transmite (cio_usb_dp_en_o = 1) a linha está nos pinos _o, senão nos _i (host).
+  // Todas as leituras dos pinos passam por aqui.
+  function bit dut_driving(); return (vif.cio_usb_dp_en_o == 1'b1); endfunction
+  function bit line_dp();     return dut_driving() ? vif.cio_usb_dp_o : vif.cio_usb_dp_i; endfunction
+  function bit line_dn();     return dut_driving() ? vif.cio_usb_dn_o : vif.cio_usb_dn_i; endfunction
+
+  // Estados da linha
+  function bit line_is_j();   return (line_dp() == 1'b1 && line_dn() == 1'b0); endfunction
+  function bit line_is_k();   return (line_dp() == 1'b0 && line_dn() == 1'b1); endfunction
+  function bit line_is_se0(); return (line_dp() == 1'b0 && line_dn() == 1'b0); endfunction
 
   // Task gerenciada pela classe pai dv_base_monitor
   virtual protected task collect_trans();
@@ -37,6 +43,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
 
       // 2. Instancia o objeto para guardar os dados da transação capturada
       trans = usb_transaction::type_id::create("trans");
+      trans.from_device = dut_driving(); // quem começou a transmitir
 
       // 3. Coleta o reset ou o pacote
       if (is_se0) collect_bus_reset(trans, valid);
@@ -88,12 +95,16 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
     end
   endtask
 
-  task get_next_bit(output bit out_bit);
+  // Lê o próximo bit. eop = 1 se a linha estava em SE0 (fim de pacote): nesse caso
+  // out_bit não vale nada e o NRZI/stuffing não é atualizado.
+  task get_next_bit(output bit out_bit, output bit eop);
     bit current_dp;
 
     // 1. Espera até o meio do "bit time" (2 ciclos de 48MHz) para ler com precisão
     repeat (2) @(posedge vif.clk_i);
-    current_dp = vif.cio_usb_dp_i;
+    eop = line_is_se0();
+    if (eop) return;
+    current_dp = line_dp();
 
     // 2. Desfaz o NRZI
     if (current_dp == prev_dp) begin
@@ -113,7 +124,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
     if (ones_cnt == 6) begin
       // O OpenTitan injetou um '0' falso aqui. Vamos "queimar" o tempo dele (4 ciclos)
       repeat (2) @(posedge vif.clk_i);
-      prev_dp = vif.cio_usb_dp_i; // Atualiza a referência, pois o '0' falso inverteu o pino
+      prev_dp = line_dp(); // Atualiza a referência, pois o '0' falso inverteu o pino
       repeat (2) @(posedge vif.clk_i);
       ones_cnt = 0;
     end
@@ -124,12 +135,16 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
     bit [7:0]  pid_byte;
     bit [15:0] token_payload;
     bit        raw_bit;
+    bit        eop;
+    bit [7:0]  cur_byte;
+    int        bit_cnt;
+    byte       bytes[$];
 
     valid = 1'b1;
 
     // 1. Lê o byte de SYNC
     for (int i = 0; i < 8; i++) begin
-      get_next_bit(raw_bit);
+      get_next_bit(raw_bit, eop);
       sync_byte[i] = raw_bit;
     end
     // SYNC: os bits no fio são 0,0,0,0,0,0,0,1 e o bit i vai para sync_byte[i] -> 8'h80
@@ -140,7 +155,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
 
     // 2. Lê o byte de PID
     for (int i = 0; i < 8; i++) begin
-      get_next_bit(raw_bit);
+      get_next_bit(raw_bit, eop);
       pid_byte[i] = raw_bit;
     end
     // PID: os 4 bits de cima são o complemento dos 4 de baixo
@@ -162,7 +177,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
         usb_transaction::PID_SOF: begin
           // Token ou SOF: exatamente 16 bits depois do PID (11 de campos + 5 de CRC5)
           for (int i = 0; i < 16; i++) begin
-            get_next_bit(raw_bit);
+            get_next_bit(raw_bit, eop);
             token_payload[i] = raw_bit;
           end
           if (trans.pid == usb_transaction::PID_SOF) begin
@@ -175,9 +190,29 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
 
         usb_transaction::PID_DATA0,
         usb_transaction::PID_DATA1: begin
-          // É um pacote de Dados!
-          // (Nota: Em um monitor avançado, faríamos um 'while' lendo bytes
-          // até achar o EOP. Por enquanto, o esqueleto do DATA fica aqui).
+          // É um pacote de Dados: lê bytes (LSB primeiro) até o EOP
+          bit_cnt = 0;
+          forever begin
+            get_next_bit(raw_bit, eop);
+            if (eop) break;
+            cur_byte[bit_cnt] = raw_bit;
+            bit_cnt++;
+            if (bit_cnt == 8) begin
+              bytes.push_back(cur_byte);
+              bit_cnt = 0;
+            end
+          end
+          if (bit_cnt != 0) begin
+            `uvm_error(`gfn, $sformatf("DATA terminou com %0d bits sobrando (fora de um byte)", bit_cnt))
+            valid = 1'b0;
+          end else if (bytes.size() < 2) begin
+            `uvm_error(`gfn, $sformatf("DATA sem CRC16: so %0d bytes", bytes.size()))
+            valid = 1'b0;
+          end else begin
+            // Os 2 últimos bytes são o CRC16: ficam fora do payload
+            trans.data = new[bytes.size() - 2];
+            foreach (trans.data[i]) trans.data[i] = bytes[i];
+          end
         end
 
         usb_transaction::PID_ACK,

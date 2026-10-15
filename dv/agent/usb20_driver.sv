@@ -12,6 +12,8 @@ class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb
   // Constantes de tempo (clock de 48 MHz, Full Speed = 12 Mbps)
   localparam int unsigned CYCLES_PER_BIT = 4;
   localparam int unsigned CYCLES_PER_US  = 48;
+  // Tempo máximo que o host espera o device começar a responder (turnaround: ~16-18 bit times)
+  localparam int unsigned RSP_TIMEOUT_CYCLES = 18 * CYCLES_PER_BIT;
 
   // Estado do NRZI e do bit stuffing
   protected line_state_e cur_line = LINE_J;
@@ -161,6 +163,119 @@ class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb
   endtask
 
   // ---------------------------------------------------------
+  // RECEPÇÃO: decodifica o que o DUT envia (pinos _o), o inverso do send_*
+  // ---------------------------------------------------------
+  // pkt[0] = SYNC (8'h80), pkt[1] = PID, resto = payload + CRC16.
+  // Retorna pkt vazio se o DUT não começar a transmitir em RSP_TIMEOUT_CYCLES.
+  virtual protected task receive_from_dut(output byte pkt[$]);
+    bit       prev_dp;     // valor anterior de D+ (para o NRZI)
+    bit       cur_dp;
+    bit       cur_dn;
+    bit       b;           // bit decodificado
+    int       rx_ones_cnt; // 1s seguidos (para o unstuffing)
+    bit [7:0] cur_byte;    // byte sendo montado (LSB primeiro)
+    int       bit_cnt;     // bits ja colocados em cur_byte
+
+    pkt.delete();
+    rx_ones_cnt = 0;
+    bit_cnt     = 0;
+
+    // 1. Espera o DUT comecar a transmitir, com timeout
+    fork begin : isolation_fork
+      fork
+        wait (vif.cio_usb_dp_en_o == 1'b1);
+        repeat (RSP_TIMEOUT_CYCLES) @(posedge vif.clk_i);
+      join_any
+      disable fork;
+    end join
+    if (vif.cio_usb_dp_en_o != 1'b1) return;
+
+    // 2. Vai para o meio do primeiro bit (1 bit = 4 ciclos a 48 MHz)
+    repeat (2) @(posedge vif.clk_i);
+    prev_dp = 1'b1; // a linha estava em J
+
+    // 3. Um bit por volta
+    forever begin
+      // Amostra o sinal no centro da janela do bit atual
+      cur_dp = vif.cio_usb_dp_o;
+      cur_dn = vif.cio_usb_dn_o;
+
+      // Linha em SE0 -> fim de pacote (EOP)
+      if (cur_dp == 1'b0 && cur_dn == 1'b0) break;
+
+      if (rx_ones_cnt == 6) begin
+        // Bit de enchimento (stuffing): nao guarda, so zera o contador
+        rx_ones_cnt = 0;
+      end else begin
+        // NRZI: igual ao anterior = 1, mudou = 0
+        if (cur_dp == prev_dp) begin
+          b = 1'b1;
+          rx_ones_cnt++;
+        end else begin
+          b = 1'b0;
+          rx_ones_cnt = 0;
+        end
+
+        // Monta o byte com o LSB primeiro
+        cur_byte[bit_cnt] = b;
+        bit_cnt++;
+        if (bit_cnt == 8) begin
+          pkt.push_back(cur_byte);
+          bit_cnt = 0;
+        end
+      end
+
+      prev_dp = cur_dp;
+      // Espera 4 ciclos para ir ao meio do proximo bit
+      repeat (CYCLES_PER_BIT) @(posedge vif.clk_i);
+    end
+
+    if (bit_cnt != 0) begin
+      `uvm_error(`gfn, $sformatf("Pacote do DUT terminou com %0d bits sobrando (fora de um byte)",
+                                 bit_cnt))
+    end
+
+    // Espera o DUT soltar a linha (fim do EOP) antes de o host voltar a transmitir
+    wait (vif.cio_usb_dp_en_o == 1'b0);
+  endtask
+
+  // Recebe a resposta do DUT e preenche o item rsp (pid, data, no_response)
+  virtual protected task get_device_response(usb_transaction rsp);
+    byte pkt[$];
+
+    receive_from_dut(pkt);
+    rsp.kind        = usb_transaction::USB_ITEM_NORMAL;
+    rsp.from_device = 1'b1;
+
+    if (pkt.size() == 0) begin
+      rsp.no_response = 1'b1;
+      return;
+    end
+
+    if (pkt[0] != 8'h80) begin
+      `uvm_error(`gfn, $sformatf("SYNC invalido na resposta do DUT: 0x%02h", pkt[0]))
+    end
+    if (pkt.size() < 2) begin
+      `uvm_error(`gfn, "Resposta do DUT sem PID")
+      return;
+    end
+    if (pkt[1][7:4] != ~pkt[1][3:0]) begin
+      `uvm_error(`gfn, $sformatf("PID invalido na resposta do DUT: 0x%02h", pkt[1]))
+    end
+    rsp.pid = usb_transaction::usb_pid_e'(pkt[1][3:0]);
+
+    // DATA: payload = tudo entre o PID e os 2 bytes de CRC16
+    if (rsp.is_data()) begin
+      if (pkt.size() < 4) begin
+        `uvm_error(`gfn, $sformatf("Pacote DATA do DUT curto demais: %0d bytes", pkt.size()))
+        return;
+      end
+      rsp.data = new[pkt.size() - 4];
+      foreach (rsp.data[i]) rsp.data[i] = pkt[i + 2];
+    end
+  endtask
+
+  // ---------------------------------------------------------
   // Loop principal (chamado pelo dv_base_driver)
   // ---------------------------------------------------------
   virtual task get_and_drive();
@@ -180,7 +295,19 @@ class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb
         end
       endcase
 
-      seq_item_port.item_done();
+      // DATA e IN: como um host real, espera o device terminar de responder antes do
+      // próximo pacote (senão host e DUT falam ao mesmo tempo). A resposta só é
+      // devolvida para a sequência se ela pediu (want_rsp = 1); ela pega com get_response().
+      if (req.kind == usb_transaction::USB_ITEM_NORMAL && req.expects_response()) begin
+        usb_transaction rsp = usb_transaction::type_id::create("rsp");
+        rsp.set_id_info(req);
+        get_device_response(rsp);
+        `uvm_info(`gfn, {"TRACE: Resposta do DUT:\n", rsp.sprint()}, UVM_LOW)
+        if (req.want_rsp) seq_item_port.item_done(rsp);
+        else              seq_item_port.item_done();
+      end else begin
+        seq_item_port.item_done();
+      end
     end
   endtask
 
