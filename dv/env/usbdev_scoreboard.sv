@@ -27,8 +27,9 @@ class usbdev_scoreboard extends cip_base_scoreboard #(
 
   // 3. Função obrigatória chamada automaticamente quando o monitor faz analysis_port.write()
   virtual function void write_usb20(usb_transaction trans);
-    `uvm_info(`gfn, $sformatf("SCOREBOARD: Pacote USB recebido | PID=0x%0h ADDR=0x%0h ENDP=0x%0h",
-                              trans.pid, trans.addr, trans.endp), UVM_LOW)
+    `uvm_info(`gfn, $sformatf("SCOREBOARD: Item USB recebido | %s | %s | PID=0x%0h ADDR=0x%0h ENDP=0x%0h DATA=%0d bytes",
+                              trans.kind.name(), trans.from_device ? "DUT->host" : "host->DUT",
+                              trans.pid, trans.addr, trans.endp, trans.data.size()), UVM_LOW)
 
       // Aqui os membros da equipe poderão implementar a validação dos pacotes USB
 

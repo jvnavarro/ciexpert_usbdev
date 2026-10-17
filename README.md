@@ -53,7 +53,8 @@
 *   `usb20_driver`: Converte o pacote lógico para pinos do DUT (`cio_usb_dp_i/dn_i`). Fluxo: Idle(J) -> SYNC -> PID(8b) -> ADDR/ENDP/CRC5 -> EOP.
 *   `usb20_monitor`: Observa o barramento (host -> DUT) e encaminha pacotes via `analysis_port` para o scoreboard.
 *   `usb20_sequencer`, `usb20_agent_cfg`, `usb20_agent`: Componentes padronizados herdados da CIP (`dv_base_agent`).
-*   `usb20_basic_seq`: Sequência base que gera um pacote aleatório.
+*   `seq_lib/usb20_seq_list`: Lista das sequências do agente, incluída pelo `usb20_agent_pkg`.
+*   `seq_lib/usb20_basic_seq`: Sequência base que gera um pacote aleatório.
 
 ### `dv/env/` (Ambiente e Checagem)
 *   `usbdev_env_cfg`: Configuração geral do ambiente, instanciação do RAL do módulo e restrição de clock fixo em 48 MHz.
@@ -63,8 +64,8 @@
 
 ### `dv/tests/` (Virtual Sequences e Testes)
 *   `usbdev_base_test`: Teste raiz. A Virtual Sequence executada é definida por argumento de compilação (`TEST_SEQ`).
-*   `usbdev_base_vseq`: Realiza inicialização (`dut_init`) via TL-UL (RAL): configura `usbctrl.enable=1`, `device_address=0x12` e `ep_out_enable[0]=1`.
-*   `usbdev_smoke_vseq`: Exemplo inicial que executa a `usb20_basic_seq` diretamente no agente.
+*   `seq_lib/usbdev_base_vseq`: Realiza inicialização (`dut_init`) via TL-UL (RAL): configura `usbctrl.enable=1`, `device_address=0x12` e `ep_out_enable[0]=1`.
+*   `seq_lib/usbdev_vseq_list`: Lista das vseqs incluída pelo `usbdev_env_pkg`. Cada colaborador cria sua vseq na própria branch e adiciona uma linha de include no final da lista.
 
 ### `dv/tb/` (Testbench Top)
 *   `tb.sv`: Instanciação do DUT e conexão das interfaces (clock/reset, barramento TL-UL, alertas, interrupções e `usb20_if`).
@@ -117,9 +118,9 @@ make wave            # Abre o Verdi com o arquivo gerado
 **Fluxo de Dados:** Teste -> VSEQ (RAL + Sequences) -> Driver -> DUT -> Monitor -> Scoreboard.
 
 **Como criar um novo cenário de teste:**
-1. Crie o arquivo `dv/tests/usbdev_<nome>_vseq.sv` estendendo `usbdev_base_vseq`.
+1. Crie o arquivo `dv/tests/seq_lib/usbdev_<nome>_vseq.sv` estendendo `usbdev_base_vseq`.
 2. Implemente a lógica principal dentro da `task body()`.
-3. Inclua o novo arquivo no pacote do ambiente (`dv/env/usbdev_env_pkg.sv`).
+3. Inclua o novo arquivo no final da lista de vseqs (`dv/tests/seq_lib/usbdev_vseq_list.sv`).
 4. Execute passando o nome da sequência: `make compile && make sim TEST_SEQ=usbdev_<nome>_vseq`.
 
 
