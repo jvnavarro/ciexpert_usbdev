@@ -25,8 +25,10 @@
 +incdir+dv/cip_infra/ral
 +incdir+dv/cip_infra/usbdpi
 +incdir+dv/agent
++incdir+dv/agent/seq_lib
 +incdir+dv/env
 +incdir+dv/tests
++incdir+dv/tests/seq_lib
 
 // 1. Pacotes DV Fundamentais (ordem de dependência):
 dv/cip_infra/bus_params_pkg/bus_params_pkg.sv

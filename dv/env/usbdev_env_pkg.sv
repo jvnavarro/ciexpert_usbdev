@@ -19,6 +19,18 @@ package usbdev_env_pkg;
   parameter string LIST_OF_ALERTS[] = {"fatal_fault"};
   parameter uint   NUM_ALERTS       = 1;
 
+  // Estados do link (campo usbstat.link_state), espelho do enum em
+  // rtl/usbdev/usbdev_linkstate.sv
+  typedef enum bit [2:0] {
+    LinkDisconnected     = 0, // sem VBUS ou sem pull-up
+    LinkPowered          = 1, // conectado, aguardando bus reset
+    LinkPoweredSuspended = 2,
+    LinkActive           = 3, // ativo e recebendo SOF
+    LinkSuspended        = 4,
+    LinkActiveNoSOF      = 5, // ativo apos o bus reset, ainda sem SOF
+    LinkResuming         = 6
+  } usbdev_link_state_e;
+
   // Ambiente
   `include "usbdev_env_cfg.sv"
   `include "usbdev_env_cov.sv"
@@ -26,8 +38,7 @@ package usbdev_env_pkg;
   `include "usbdev_scoreboard.sv"
   `include "usbdev_env.sv"
 
-  // Sequencias virtuais
-  `include "usbdev_base_vseq.sv"
-  `include "usbdev_smoke_vseq.sv"
-  `include "usbdev_in_trans_vseq.sv"
+  // Sequencias virtuais (lista em tests/seq_lib/usbdev_vseq_list.sv)
+  `include "usbdev_vseq_list.sv"
+
 endpackage : usbdev_env_pkg

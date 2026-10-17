@@ -2,7 +2,7 @@
 # Makefile DV - usbdev (UVM + CIP lib OpenTitan) - Synopsys VCS
 # ==============================================================================
 # Uso:
-#   make                      -> compila e roda o smoke (usbdev_base_test + usbdev_smoke_vseq)
+#   make TEST_SEQ=<vseq>      -> compila e roda uma vseq (default: usbdev_base_vseq, so reset + init do DUT)
 #   make compile              -> apenas compila
 #   make sim TEST_SEQ=<vseq>  -> roda uma vseq com o binario ja compilado
 #   make clean
@@ -16,7 +16,7 @@ OUT_DIR     ?= $(CURDIR)/out
 
 # Configuracoes de simulacao
 TEST        ?= usbdev_base_test
-TEST_SEQ    ?= usbdev_smoke_vseq
+TEST_SEQ    ?= usbdev_base_vseq
 VERBOSITY   ?= UVM_LOW
 SEED        ?= 1
 WAVE        ?= 0
@@ -84,14 +84,11 @@ ENV_SETUP   = if ! command -v $(VCS) >/dev/null 2>&1; then \
 
 SHELL       := /bin/bash
 
-.PHONY: all compile sim run smoke cov cov_gui wave clean help
+.PHONY: all compile sim run cov cov_gui wave clean help
 
 all: run
 
 run: compile sim
-
-smoke:
-	$(MAKE) run TEST=usbdev_base_test TEST_SEQ=usbdev_smoke_vseq
 
 compile:
 	@mkdir -p $(OUT_DIR)
@@ -120,4 +117,4 @@ clean:
 	rm -rf $(OUT_DIR)
 
 help:
-	@echo "make [run|compile|sim|smoke|cov|cov_gui|wave|clean] [TEST=$(TEST)] [TEST_SEQ=$(TEST_SEQ)] [SEED=$(SEED)] [VERBOSITY=$(VERBOSITY)] [WAVE=0|1] [GUI=0|1] [COV=0|1] [PLUSARGS=...]"
+	@echo "make [run|compile|sim|cov|cov_gui|wave|clean] [TEST=$(TEST)] [TEST_SEQ=$(TEST_SEQ)] [SEED=$(SEED)] [VERBOSITY=$(VERBOSITY)] [WAVE=0|1] [GUI=0|1] [COV=0|1] [PLUSARGS=...]"
