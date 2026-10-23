@@ -40,8 +40,17 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
     bit [3:0] current_endp = 4'h0;
 
     forever begin
+      if (cfg != null && !cfg.en_monitor) begin
+        @(posedge vif.clk_i);
+        continue;
+      end
+
       // 1. Aguarda a linha sair do J-State: K = início de pacote, SE0 = possível reset
       wait_for_start_of_packet(is_se0);
+
+      if (cfg != null && !cfg.en_monitor) begin
+        continue;
+      end
 
       // 2. Instancia o objeto para guardar os dados da transação capturada
       trans = usb_transaction::type_id::create("trans");
@@ -81,9 +90,11 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
   // Task auxiliar: espera sair do J-State e diz se a linha foi para K ou SE0
   task wait_for_start_of_packet(output bit is_se0);
     @(posedge vif.clk_i);
-    // Enquanto não for K nem SE0 (J ou SE1), continua aguardando
-    while (!line_is_k() && !line_is_se0()) begin
-      if (!line_is_j()) `uvm_warning(`gfn, "Linha em SE1 (D+=1, D-=1) enquanto aguardava inicio de pacote")
+    // Enquanto o monitor estiver desabilitado ou a linha estiver em repouso (J ou SE1)
+    while ((cfg != null && !cfg.en_monitor) || (!line_is_k() && !line_is_se0())) begin
+      if ((cfg == null || cfg.en_monitor) && !line_is_j()) begin
+        `uvm_warning(`gfn, "Linha em SE1 (D+=1, D-=1) enquanto aguardava inicio de pacote")
+      end
       @(posedge vif.clk_i);
     end
     is_se0 = line_is_se0();

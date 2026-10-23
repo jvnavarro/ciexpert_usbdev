@@ -36,11 +36,31 @@ class usbdev_phy_pins_sense_vseq extends usbdev_base_vseq;
     super.new(name);
   endfunction
 
+  virtual task pre_start();
+    super.pre_start();
+    // Desativa a decodificacao de pacotes pelo monitor durante o teste de pinos fisicos
+    if (cfg != null && cfg.m_usb20_agent_cfg != null) begin
+      cfg.m_usb20_agent_cfg.en_monitor = 1'b0;
+    end
+  endtask
+
+  virtual task post_start();
+    // Restaura o monitor ao finalizar o teste
+    if (cfg != null && cfg.m_usb20_agent_cfg != null) begin
+      cfg.m_usb20_agent_cfg.en_monitor = 1'b1;
+    end
+    super.post_start();
+  endtask
+
   // ----------------------------------------------------------------------------
   // dut_init: Para este teste, inicializamos o DUT via CSR mas sem tráfego USB
   // ----------------------------------------------------------------------------
   virtual task dut_init(string reset_kind = "HARD");
     super.dut_init(reset_kind);
+
+    if (cfg != null && cfg.m_usb20_agent_cfg != null) begin
+      cfg.m_usb20_agent_cfg.en_monitor = 1'b0;
+    end
 
     // Obtém a interface física do config_db para inspecionar/estimular pinos
     if (!uvm_config_db#(virtual usb20_if)::get(null, "*", "vif", vif)) begin
@@ -189,6 +209,10 @@ class usbdev_phy_pins_sense_vseq extends usbdev_base_vseq;
     vif.cio_usb_dp_i <= 1'b1;
     vif.cio_usb_dn_i <= 1'b0;
     loopback_delay(5);
+
+    if (cfg != null && cfg.m_usb20_agent_cfg != null) begin
+      cfg.m_usb20_agent_cfg.en_monitor = 1'b1;
+    end
 
     `uvm_info(get_type_name(), "==========================================================", UVM_LOW)
     `uvm_info(get_type_name(), ">>> [SUCESSO] usbdev_phy_pins_sense_vseq CONCLUIDO COM 100% DE EXITO!", UVM_LOW)
