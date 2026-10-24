@@ -133,6 +133,9 @@ csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
 
 csr_wr(.ptr(ral.usbctrl.enable), .value(1'b1));
 csr_wr(.ptr(ral.usbctrl.device_address), .value(7'h12));
+csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
+//`uvm_info(get_type_name(),
+  //  $sformatf("DEBUG USBCTRL APOS RESTAURAR ENDERECO: 0x%08h", valor_lido), UVM_LOW)
 `uvm_info(get_type_name(),
 	$sformatf("DEBUG RAL USBCTRL: 0x%08h", ral.usbctrl.get_mirrored_value()), UVM_LOW)
 // Confirmar configuracao 
@@ -149,6 +152,22 @@ ral.usbctrl.write(
 csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
 `uvm_info(get_type_name(),
 	$sformatf("DEBUG USBCTRL APOS WRITE DIRETO: 0x%08h", valor_lido), UVM_LOW)
+// Gerar reset USB antes de enviar o token IN
+m_usb20_seq = usb20_basic_seq::type_id::create("m_usb20_reset_seq");
+m_usb20_seq.enviar_reset = 1;
+m_usb20_seq.start(p_sequencer.usb20_sequencer_h);
+csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
+//`uvm_info(get_type_name(),
+  //  $sformatf("DEBUG USBCTRL DEPOIS DO RESET: 0x%08h", valor_lido), UVM_LOW)
+// Restaurar o endereco USB apos o reset do barramento
+ral.usbctrl.write(
+    .status(usbctrl_status),
+    .value(32'h00120001),
+    .parent(this)
+);
+csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
+//`uvm_info(get_type_name(),
+  //  $sformatf("DEBUG USBCTRL APOS RESTAURAR ENDERECO: 0x%08h", valor_lido), UVM_LOW)
 // Etapa 8: Iniciar a sequencia USB 2.0
 m_usb20_seq = usb20_basic_seq::type_id::create("m_usb20_seq");
 m_usb20_seq.enviar_in_ep2 = 1;
