@@ -19,6 +19,13 @@ end
 	"Iniciando teste in_trans",
 	UVM_LOW)
 dut_init();
+// Ativar a verificacao da Etapa 10 no scoreboard
+uvm_config_db#(bit)::set(
+    null,
+    "uvm_test_top.env.scoreboard",
+    "verificar_etapa10",
+    1'b1
+);
 // Etapa 1: ler o registrador in_sent
 csr_rd(.ptr(ral.in_sent[0]), .value(valor_lido));
 
@@ -116,6 +123,11 @@ end
 // Buffer 0, tamanho 8 bytes, rdy = 1
 csr_wr(.ptr(ral.configin[2]), .value(32'h80000800));
 csr_rd(.ptr(ral.configin[2]), .value(valor_lido));
+
+`uvm_info(get_type_name(),
+  $sformatf("DEBUG RDY RESTAURADO: configin[2] = 0x%08h", valor_lido),
+  UVM_LOW)
+csr_rd(.ptr(ral.configin[2]), .value(valor_lido));
 if (valor_lido !== 32'h80000800) begin
 	`uvm_error(get_type_name(),
 		$sformatf(" Falha ao configurar IN do ednpoint 2: 0x%08h", valor_lido))
@@ -156,6 +168,11 @@ csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
 m_usb20_seq = usb20_basic_seq::type_id::create("m_usb20_reset_seq");
 m_usb20_seq.enviar_reset = 1;
 m_usb20_seq.start(p_sequencer.usb20_sequencer_h);
+csr_rd(.ptr(ral.configin[2]), .value(valor_lido));
+
+`uvm_info(get_type_name(),
+  $sformatf("DEBUG APOS RESET: configin[2] = 0x%08h", valor_lido),
+  UVM_LOW)
 csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
 //`uvm_info(get_type_name(),
   //  $sformatf("DEBUG USBCTRL DEPOIS DO RESET: 0x%08h", valor_lido), UVM_LOW)
@@ -165,6 +182,9 @@ ral.usbctrl.write(
     .value(32'h00120001),
     .parent(this)
 );
+// Restaurar a prontidão do endpoint 2 após o reset USB
+csr_wr(.ptr(ral.configin[2]), .value(32'h80000800));
+
 csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
 //`uvm_info(get_type_name(),
   //  $sformatf("DEBUG USBCTRL APOS RESTAURAR ENDERECO: 0x%08h", valor_lido), UVM_LOW)
