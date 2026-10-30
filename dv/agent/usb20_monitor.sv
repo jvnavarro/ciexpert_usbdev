@@ -36,6 +36,8 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
     usb_transaction trans;
     bit is_se0;
     bit valid;
+    bit current_dir_in = 1'b0;
+    bit [3:0] current_endp = 4'h0;
 
     forever begin
       // 1. Aguarda a linha sair do J-State: K = início de pacote, SE0 = possível reset
@@ -46,8 +48,27 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
       trans.from_device = dut_driving(); // quem começou a transmitir
 
       // 3. Coleta o reset ou o pacote
-      if (is_se0) collect_bus_reset(trans, valid);
-      else        collect_packet(trans, valid);
+      if (is_se0) begin
+        collect_bus_reset(trans, valid);
+        current_dir_in = 1'b0;
+        current_endp   = 4'h0;
+      end else begin
+        collect_packet(trans, valid);
+
+        // No protocolo USB, pacotes DATA e Handshakes herdam a direcao e o EP do Token anterior
+        if (trans.pid == usb_transaction::PID_IN) begin
+          current_dir_in = 1'b1;
+          current_endp   = trans.endp;
+          trans.dir_in   = 1'b1;
+        end else if (trans.pid inside {usb_transaction::PID_OUT, usb_transaction::PID_SETUP}) begin
+          current_dir_in = 1'b0;
+          current_endp   = trans.endp;
+          trans.dir_in   = 1'b0;
+        end else begin
+          trans.dir_in   = current_dir_in;
+          trans.endp     = current_endp;
+        end
+      end
 
       // 4. Só envia para o Scoreboard o que foi reconhecido como válido
       if (valid) begin
