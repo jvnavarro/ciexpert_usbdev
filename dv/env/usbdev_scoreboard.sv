@@ -73,6 +73,42 @@ trans.from_device &&
 	end
   end
 end
+
+      // Aqui os membros da equipe poderão implementar a validação dos pacotes USB
+
+      // Dispara a amostragem da cobertura funcional se 'cov',  estiver instanciado
+        if (cov != null) begin
+      // 1. Amostra PID recebido
+      cov.pids_to_dut_cg.sample(trans.pid);
+
+      // 2. Se for resposta do DUT (DUT -> Host), pontua em pids_from_dut_cg
+      if (trans.pid inside {usb_transaction::PID_DATA0, usb_transaction::PID_DATA1,
+                            usb_transaction::PID_ACK,   usb_transaction::PID_NAK,
+                            usb_transaction::PID_STALL}) begin
+        cov.pids_from_dut_cg.sample(trans.pid);
+      end
+
+      // 3. Amostra endereço e endpoint
+      cov.address_cg.sample(trans.addr, trans.endp);
+
+      // 4. Tokens por Endpoint
+      if (trans.pid inside {usb_transaction::PID_SETUP, usb_transaction::PID_OUT, usb_transaction::PID_IN}) begin
+        cov.pid_type_endp_cg.sample(trans.pid, trans.endp);
+      end
+
+      // 5. Data Toggle
+      if (trans.pid inside {usb_transaction::PID_DATA0, usb_transaction::PID_DATA1,
+                            usb_transaction::PID_ACK,   usb_transaction::PID_NAK}) begin
+        cov.data_tog_endp_cg.sample(trans.pid, trans.is_in(), trans.endp);
+      end
+
+      // 6. Tamanho dos dados
+      if (trans.is_data()) begin
+        cov.data_pkt_cg.sample(trans.is_in(), trans.data.size());
+      end
+    end
+
+
   endfunction
 // Verificar se a Etapa 10 foi concluída
 virtual function void check_phase(uvm_phase phase);

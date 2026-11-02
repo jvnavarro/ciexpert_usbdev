@@ -10,7 +10,8 @@ class usb_transaction extends uvm_sequence_item;
     PID_DATA1 = 4'b1011,
     PID_ACK   = 4'b0010,
     PID_NAK   = 4'b1010,
-    PID_STALL = 4'b1110
+    PID_STALL = 4'b1110,
+    PID_PRE   = 4'b1100
   } usb_pid_e;
   // Tipos de transação para o Driver
   typedef enum bit [1:0] {
@@ -26,6 +27,7 @@ class usb_transaction extends uvm_sequence_item;
   rand usb_pid_e pid;
   rand bit [6:0] addr;
   rand bit [3:0] endp;
+  rand bit       dir_in; // 0 = OUT, 1 = IN
 
   // NOVO: Array dinâmico para carregar o payload de dados
   rand byte data[];
@@ -65,11 +67,13 @@ class usb_transaction extends uvm_sequence_item;
     idle_bits inside {[1:100]};
   }
 
+  // 1. Registro da classe na fábrica do UVM (UVM Factory)
   `uvm_object_utils_begin(usb_transaction)
     `uvm_field_enum(item_kind_e, kind, UVM_DEFAULT)
     `uvm_field_enum(usb_pid_e, pid, UVM_DEFAULT)
     `uvm_field_int(addr, UVM_DEFAULT)
     `uvm_field_int(endp, UVM_DEFAULT)
+    `uvm_field_int(dir_in, UVM_DEFAULT)
     `uvm_field_int(frame_num, UVM_DEFAULT)
     `uvm_field_array_int(data, UVM_DEFAULT)
     `uvm_field_int(reset_us, UVM_DEFAULT)
@@ -86,6 +90,12 @@ class usb_transaction extends uvm_sequence_item;
 // Retorna 1 se for um pacote Token (IN, OUT, SETUP)
   function bit is_token();
     return (pid == PID_IN || pid == PID_OUT || pid == PID_SETUP);
+  endfunction
+
+  // Funções auxiliares
+  // 1. Retorna 1 se o pacote for do fluxo IN (DUT -> Host)
+  function bit is_in();
+    return (pid inside {PID_IN}) || dir_in;
   endfunction
 
   // Retorna 1 se for um pacote de Dados (DATA0, DATA1)

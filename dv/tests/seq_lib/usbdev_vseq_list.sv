@@ -10,3 +10,4 @@
 `include "usbdev_base_vseq.sv"
 `include "usbdev_smoke_vseq.sv"
 `include "usbdev_in_trans_vseq.sv"
+`include "usbdev_data_toggle_clear_vseq.sv"

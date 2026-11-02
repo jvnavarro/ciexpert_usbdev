@@ -24,7 +24,7 @@ class usbdev_env_cfg extends cip_base_env_cfg #(.RAL_T(usbdev_reg_block));
   virtual function void initialize(bit inherit_ral_models = 1'b0);
     list_of_alerts = usbdev_env_pkg::LIST_OF_ALERTS;
     super.initialize(inherit_ral_models);
-
+    en_cov = 1'b1;
     m_usb20_agent_cfg = usb20_agent_cfg::type_id::create("m_usb20_agent_cfg");
 
     num_interrupts = ral.intr_state.get_n_used_bits();

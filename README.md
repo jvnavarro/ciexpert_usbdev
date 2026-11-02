@@ -123,7 +123,7 @@ make wave            # Abre o Verdi com o arquivo gerado
 3. Inclua o novo arquivo no final da lista de vseqs (`dv/tests/seq_lib/usbdev_vseq_list.sv`).
 4. Execute passando o nome da sequência: `make compile && make sim TEST_SEQ=usbdev_<nome>_vseq`.
 
-
+// open titan roda n testes para coverage conferir para cada teste
 ## 5. Mapeamento de Hardware e Registradores
 
 ### Sinais e Registradores (Geral)
