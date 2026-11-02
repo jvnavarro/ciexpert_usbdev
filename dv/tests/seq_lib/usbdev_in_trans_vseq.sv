@@ -9,6 +9,8 @@ endfunction
 virtual task body();
 	uvm_reg_data_t valor_lido;
 	usb20_basic_seq m_usb20_seq;
+        byte unsigned dados_out_esperados[];
+        bit [31:0] palavra_recebida;
 	virtual usb20_if usb_vif;
 	uvm_status_e usbctrl_status;
 	if(!uvm_config_db#(virtual usb20_if)::get(
@@ -19,6 +21,18 @@ end
 	"Iniciando teste in_trans",
 	UVM_LOW)
 dut_init();
+// Configuracao inicial da recepcao OUT no endpoint 2
+// Disponibilizar o buffer 7 para receber os dados USB
+
+csr_wr(.ptr(ral.ep_out_enable[0].enable[2]), .value(1'b1));
+
+csr_wr(.ptr(ral.rxenable_out), .value(32'h0FFB0004));
+
+csr_wr(.ptr(ral.avoutbuffer.buffer), .value(5'd7));
+
+`uvm_info(get_type_name(),
+    "Recepcao OUT configurada no endpoint 2 com buffer 7",
+    UVM_LOW)
 // Ativar a verificacao da Etapa 10 no scoreboard
 uvm_config_db#(bit)::set(
     null,
@@ -184,10 +198,118 @@ ral.usbctrl.write(
 );
 // Restaurar a prontidão do endpoint 2 após o reset USB
 csr_wr(.ptr(ral.configin[2]), .value(32'h80000800));
+// Restaurar a recepcao OUT apos o reset USB
+csr_wr(.ptr(ral.ep_out_enable[0].enable[2]), .value(1'b1));
+csr_wr(.ptr(ral.rxenable_out), .value(32'h0FFB0004));
+csr_wr(.ptr(ral.avoutbuffer.buffer), .value(5'd7));
 
+`uvm_info(get_type_name(),
+    "Recepcao OUT restaurada apos reset USB",
+    UVM_LOW)
+// Enviar token OUT para o endpoint 2
+m_usb20_seq = usb20_basic_seq::type_id::create("m_usb20_out_seq");
+m_usb20_seq.start(p_sequencer.usb20_sequencer_h);
+
+`uvm_info(get_type_name(),
+    "Token OUT enviado ao endpoint 2",
+    UVM_LOW)
+// Enviar DATA0 com conteudo e tamanho aleatorios
+m_usb20_seq = usb20_basic_seq::type_id::create("m_usb20_data0_seq");
+m_usb20_seq.enviar_data0 = 1'b1;
+m_usb20_seq.start(p_sequencer.usb20_sequencer_h);
+dados_out_esperados = m_usb20_seq.dados_enviados;
+// Disponibilizar os dados do OUT para verificacao da resposta IN
+uvm_config_db#(usb_bytes_t)::set(
+    null,
+    "uvm_test_top.env.scoreboard",
+    "dados_in_esperados",
+    dados_out_esperados
+);
+// Ler o RX FIFO apos a recepcao do pacote OUT/DATA0
+csr_rd(.ptr(ral.rxfifo), .value(valor_lido));
+
+`uvm_info(get_type_name(),
+    $sformatf("RX FIFO apos DATA0: 0x%08h", valor_lido),
+    UVM_LOW)
+// Verificar se o pacote OUT foi recebido no endpoint 2
+if (valor_lido[23:20] !== 4'd2) begin
+    `uvm_error(get_type_name(),
+        $sformatf("RX FIFO: endpoint esperado 2, recebido %0d",
+                  valor_lido[23:20]))
+end
+else begin
+    `uvm_info(get_type_name(),
+        "PASS: RX FIFO indica endpoint 2",
+        UVM_LOW)
+end
+// Verificar se o pacote recebido e OUT, nao SETUP
+if (valor_lido[19] !== 1'b0) begin
+    `uvm_error(get_type_name(),
+        "RX FIFO: campo SETUP deveria ser zero")
+end
+else begin
+    `uvm_info(get_type_name(),
+        "PASS: RX FIFO confirma pacote OUT",
+        UVM_LOW)
+end
+// Verificar o tamanho do pacote recebido
+if (valor_lido[14:8] !== 7'(dados_out_esperados.size())) begin
+    `uvm_error(get_type_name(),
+        $sformatf("RX FIFO: tamanho esperado %0d, recebido %0d",
+                  dados_out_esperados.size(), valor_lido[14:8]))
+end
+else begin
+    `uvm_info(get_type_name(),
+        $sformatf("PASS: RX FIFO confirma %0d bytes recebidos",
+                  dados_out_esperados.size()),
+        UVM_LOW)
+end
+// Verificar se o USBDEV utilizou o buffer 7
+if (valor_lido[4:0] !== 5'd7) begin
+    `uvm_error(get_type_name(),
+        $sformatf("RX FIFO: buffer esperado 7, recebido %0d",
+                  valor_lido[4:0]))
+end
+else begin
+    `uvm_info(get_type_name(),
+        "PASS: RX FIFO confirma buffer 7",
+        UVM_LOW)
+end
+// Verificar os dados recebidos no buffer 7
+for (int i = 0; i < dados_out_esperados.size(); i++) begin
+
+    // Ler uma nova palavra a cada quatro bytes
+    if ((i % 4) == 0) begin
+        mem_rd(
+            .ptr(ral.buffer),
+            .offset(32'h70 + (i / 4)),
+            .data(palavra_recebida)
+        );
+    end
+
+    // Comparar o byte correspondente
+    if (palavra_recebida[8*(i%4) +: 8] !== dados_out_esperados[i]) begin
+        `uvm_error(get_type_name(),
+            $sformatf("Buffer 7: byte %0d esperado 0x%02h, recebido 0x%02h",
+                      i,
+                      dados_out_esperados[i],
+                      palavra_recebida[8*(i%4) +: 8]))
+    end
+end
+
+`uvm_info(get_type_name(),
+    "Verificacao dos dados recebidos no buffer 7 concluida",
+    UVM_LOW)
+// Preparar a transmissao IN utilizando os dados recebidos no OUT
+csr_wr(
+    .ptr(ral.configin[2]),
+    .value(32'h80000000 | (dados_out_esperados.size() << 8) | 32'd7)
+);
 csr_rd(.ptr(ral.usbctrl), .value(valor_lido));
 //`uvm_info(get_type_name(),
   //  $sformatf("DEBUG USBCTRL APOS RESTAURAR ENDERECO: 0x%08h", valor_lido), UVM_LOW)
+// Habilitar interrupcao de pacote IN enviado
+csr_wr(.ptr(ral.intr_enable.pkt_sent), .value(1'b1));
 // Etapa 8: Iniciar a sequencia USB 2.0
 m_usb20_seq = usb20_basic_seq::type_id::create("m_usb20_seq");
 m_usb20_seq.enviar_in_ep2 = 1;
@@ -232,6 +354,52 @@ join
 	`uvm_error(get_type_name(),
 	"ETAPA 9: DUT nao habilitou a saída USB")
 	end
+// Enviar ACK do host após receber o DATA0 do USBDEV
+m_usb20_seq = usb20_basic_seq::type_id::create("m_usb20_ack_seq");
+m_usb20_seq.enviar_ack = 1'b1;
+m_usb20_seq.start(p_sequencer.usb20_sequencer_h);
+
+`uvm_info(get_type_name(),
+    "ACK do host enviado apos DATA0 do USBDEV",
+    UVM_LOW)
+// Verificar interrupcao de pacote enviado
+csr_rd(.ptr(ral.intr_state.pkt_sent), .value(valor_lido));
+
+if (valor_lido != 1'b1) begin
+    `uvm_error(get_type_name(),
+        "ETAPA 11: interrupcao pkt_sent nao foi ativada")
+end
+else begin
+    `uvm_info(get_type_name(),
+        "PASS ETAPA 11: interrupcao pkt_sent ativada",
+        UVM_LOW)
+end
+// Etapa 12: Verificar registro de envio no endpoint 2
+csr_rd(.ptr(ral.in_sent[0].sent[2]), .value(valor_lido));
+
+if (valor_lido != 1'b1) begin
+    `uvm_error(get_type_name(),
+        "ETAPA 12: in_sent do endpoint 2 nao foi ativado")
+end
+else begin
+    `uvm_info(get_type_name(),
+        "PASS ETAPA 12: in_sent do endpoint 2 ativado",
+        UVM_LOW)
+end
+// Etapa 13: Limpar o registro in_sent do endpoint 2
+csr_wr(.ptr(ral.in_sent[0].sent[2]), .value(1'b1));
+
+csr_rd(.ptr(ral.in_sent[0].sent[2]), .value(valor_lido));
+
+if (valor_lido != 1'b0) begin
+    `uvm_error(get_type_name(),
+        "ETAPA 13: in_sent do endpoint 2 nao foi limpo")
+end
+else begin
+    `uvm_info(get_type_name(),
+        "PASS ETAPA 13: in_sent do endpoint 2 limpo corretamente",
+        UVM_LOW)
+end
 end
 endtask
 endclass
