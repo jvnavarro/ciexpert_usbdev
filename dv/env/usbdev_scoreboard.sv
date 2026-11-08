@@ -1,5 +1,6 @@
 // 1. Declaração da macro fora da classe (para evitar conflitos de nomes no UVM)
 `uvm_analysis_imp_decl(_usb20)
+typedef byte unsigned usb_bytes_t[];
 
 class usbdev_scoreboard extends cip_base_scoreboard #(
   .CFG_T          (usbdev_env_cfg),
@@ -7,7 +8,12 @@ class usbdev_scoreboard extends cip_base_scoreboard #(
   .COV_T          (usbdev_env_cov)
 );
   `uvm_component_utils(usbdev_scoreboard)
-
+// Indica se a Etapa 10 foi validada com sucesso
+bit etapa10_validada = 0;
+// Habilita a verificacao especifica da etapa 10
+bit verificar_etapa10 = 0;
+// Dados recebidos no OUT que devem retornar na transmissao IN
+byte unsigned dados_in_esperados[];
   // 2. Declaração da porta de análise para receber dados do usb20_monitor
   uvm_analysis_imp_usb20 #(usb_transaction, usbdev_scoreboard) usb20_fifo;
 
@@ -27,9 +33,57 @@ class usbdev_scoreboard extends cip_base_scoreboard #(
 
   // 3. Função obrigatória chamada automaticamente quando o monitor faz analysis_port.write()
   virtual function void write_usb20(usb_transaction trans);
+// Consultar se a verificacao da Etapa 10 foi habilitada
+void'(uvm_config_db#(bit)::get(
+    this,
+    "",
+    "verificar_etapa10",
+    verificar_etapa10
+));
+// Recuperar os bytes enviados pelo host no pacote OUT
+void'(uvm_config_db#(usb_bytes_t)::get(
+    this,
+    "",
+    "dados_in_esperados",
+    dados_in_esperados
+));
     `uvm_info(`gfn, $sformatf("SCOREBOARD: Item USB recebido | %s | %s | PID=0x%0h ADDR=0x%0h ENDP=0x%0h DATA=%0d bytes",
                               trans.kind.name(), trans.from_device ? "DUT->host" : "host->DUT",
                               trans.pid, trans.addr, trans.endp, trans.data.size()), UVM_LOW)
+
+    // Aqui os membros da equipe poderão implementar a validação dos pacotes USB
+    // Etapa 10: verificar os 8 bytes transmitidos pelo DUT
+if (
+verificar_etapa10 &&
+trans.from_device &&
+ trans.kind == usb_transaction::USB_ITEM_NORMAL &&
+ trans.pid == usb_transaction::PID_DATA0) begin
+
+  if (trans.data.size() != dados_in_esperados.size()) begin
+    `uvm_error(get_type_name(),
+      $sformatf("ETAPA 10: esperado %0d bytes, recebido %0d",
+                dados_in_esperados.size(),
+                trans.data.size()))
+end
+  else begin
+  bit dados_corretos = 1;
+    foreach (trans.data[i]) begin
+      if (trans.data[i] !== dados_in_esperados[i]) begin
+      dados_corretos = 0;
+        `uvm_error(get_type_name(),
+          $sformatf("ETAPA 10: byte %0d incorreto. Esperado=0x%02h Recebido=0x%02h",
+                    i, dados_in_esperados[i], trans.data[i]))
+      end
+    end
+      if (dados_corretos) begin
+	etapa10_validada = 1;
+    `uvm_info(get_type_name(),
+      $sformatf("ETAPA 10: pacote DATA0 de %0d bytes verificado corretamente",
+          dados_in_esperados.size()),
+      UVM_LOW)
+	end
+  end
+end
 
       // Aqui os membros da equipe poderão implementar a validação dos pacotes USB
 
@@ -67,6 +121,15 @@ class usbdev_scoreboard extends cip_base_scoreboard #(
 
 
   endfunction
+// Verificar se a Etapa 10 foi concluída
+virtual function void check_phase(uvm_phase phase);
+  super.check_phase(phase);
+
+  if (verificar_etapa10 && !etapa10_validada) begin
+    `uvm_error(get_type_name(),
+      "ETAPA 10: nenhum pacote DATA0 valido com os dados esperados foi recebido")
+  end
+endfunction
 
   // Acessos TL-UL: obrigatório sobrescrever na cip_base_scoreboard
   virtual task process_tl_access(tl_seq_item item, tl_channels_e channel, string ral_name);
