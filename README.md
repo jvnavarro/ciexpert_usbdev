@@ -9,7 +9,7 @@
 ## 1. Diagramas de Arquitetura
 
 ![Estrutura do repositório USBDEV](doc/usb_dev_repositorio.drawio.svg)
-![Diagrama de Blocos](esquema_simples.drawio.svg)
+![Diagrama de Blocos](doc/diagrama_blocos.drawio.svg)
 
 ### Topologia do Ambiente UVM
 
