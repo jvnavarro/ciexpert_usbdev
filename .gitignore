@@ -1,5 +1,6 @@
 # Build and simulation output directory
 out/
+out_cov_ot/
 build/
 
 # VCS / Verdi artifacts
