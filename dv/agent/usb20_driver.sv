@@ -41,12 +41,12 @@ class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb
   virtual protected task set_line(line_state_e st);
     case (st)
       LINE_J: begin
-        vif.cio_usb_dp_i <= 1'b1;
-        vif.cio_usb_dn_i <= 1'b0;
+        vif.cio_usb_dp_i <= ~cfg.pinflip;
+        vif.cio_usb_dn_i <= cfg.pinflip;
       end
       LINE_K: begin
-        vif.cio_usb_dp_i <= 1'b0;
-        vif.cio_usb_dn_i <= 1'b1;
+        vif.cio_usb_dp_i <= cfg.pinflip;
+        vif.cio_usb_dn_i <= ~cfg.pinflip;
       end
       LINE_SE0: begin
         vif.cio_usb_dp_i <= 1'b0;
@@ -197,8 +197,8 @@ class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb
     // 3. Um bit por volta
     forever begin
       // Amostra o sinal no centro da janela do bit atual
-      cur_dp = vif.cio_usb_dp_o;
-      cur_dn = vif.cio_usb_dn_o;
+      cur_dp = cfg.pinflip ? vif.cio_usb_dn_o : vif.cio_usb_dp_o;
+      cur_dn = cfg.pinflip ? vif.cio_usb_dp_o : vif.cio_usb_dn_o;
 
       // Linha em SE0 -> fim de pacote (EOP)
       if (cur_dp == 1'b0 && cur_dn == 1'b0) break;
@@ -280,6 +280,10 @@ class usb20_driver extends dv_base_driver #(.ITEM_T(usb_transaction),.CFG_T (usb
   // ---------------------------------------------------------
   virtual task get_and_drive();
     drive_line(LINE_J, 10); // repouso inicial
+
+    fork
+      forever @(cfg.pinflip) set_line(cur_line);
+    join_none
 
     forever begin
       seq_item_port.get_next_item(req);

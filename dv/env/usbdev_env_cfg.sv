@@ -27,6 +27,9 @@ class usbdev_env_cfg extends cip_base_env_cfg #(.RAL_T(usbdev_reg_block));
     en_cov = 1'b1;
     m_usb20_agent_cfg = usb20_agent_cfg::type_id::create("m_usb20_agent_cfg");
 
+    // O DUT suporta apenas uma requisicao pendente por vez
+    m_tl_agent_cfgs[RAL_T::type_name].max_outstanding_req = 1;
+
     num_interrupts = ral.intr_state.get_n_used_bits();
   endfunction
 

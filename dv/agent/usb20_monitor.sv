@@ -23,8 +23,10 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
   // transmite (cio_usb_dp_en_o = 1) a linha está nos pinos _o, senão nos _i (host).
   // Todas as leituras dos pinos passam por aqui.
   function bit dut_driving(); return (vif.cio_usb_dp_en_o == 1'b1); endfunction
-  function bit line_dp();     return dut_driving() ? vif.cio_usb_dp_o : vif.cio_usb_dp_i; endfunction
-  function bit line_dn();     return dut_driving() ? vif.cio_usb_dn_o : vif.cio_usb_dn_i; endfunction
+  function bit raw_dp();      return dut_driving() ? vif.cio_usb_dp_o : vif.cio_usb_dp_i; endfunction
+  function bit raw_dn();      return dut_driving() ? vif.cio_usb_dn_o : vif.cio_usb_dn_i; endfunction
+  function bit line_dp();     return cfg.pinflip ? raw_dn() : raw_dp(); endfunction
+  function bit line_dn();     return cfg.pinflip ? raw_dp() : raw_dn(); endfunction
 
   // Estados da linha
   function bit line_is_j();   return (line_dp() == 1'b1 && line_dn() == 1'b0); endfunction
@@ -207,6 +209,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
             trans.addr = token_payload[6:0];
             trans.endp = token_payload[10:7];
           end
+          trans.crc5 = {<<{token_payload[15:11]}};
         end
 
         usb_transaction::PID_DATA0,
@@ -233,6 +236,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
             // Os 2 últimos bytes são o CRC16: ficam fora do payload
             trans.data = new[bytes.size() - 2];
             foreach (trans.data[i]) trans.data[i] = bytes[i];
+            trans.crc16 = {<<{bytes[bytes.size() - 2], bytes[bytes.size() - 1]}};
           end
         end
 
