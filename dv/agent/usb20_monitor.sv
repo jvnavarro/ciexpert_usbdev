@@ -209,6 +209,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
             trans.addr = token_payload[6:0];
             trans.endp = token_payload[10:7];
           end
+          trans.crc5 = {<<{token_payload[15:11]}};
         end
 
         usb_transaction::PID_DATA0,
@@ -235,6 +236,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
             // Os 2 últimos bytes são o CRC16: ficam fora do payload
             trans.data = new[bytes.size() - 2];
             foreach (trans.data[i]) trans.data[i] = bytes[i];
+            trans.crc16 = {<<{bytes[bytes.size() - 2], bytes[bytes.size() - 1]}};
           end
         end
 
