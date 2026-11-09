@@ -35,7 +35,7 @@ VCS_FLAGS  += +define+UVM
 VCS_FLAGS  += +define+INC_ASSERT
 VCS_FLAGS  += -debug_access+all -kdb -lca
 VCS_FLAGS  += +vcs+lic+wait
-VCS_FLAGS  += -top tb
+VCS_FLAGS  += -top tb -top sec_cm_prim_onehot_check_bind
 VCS_FLAGS  += -f $(FLIST_RTL) -f $(FLIST_TB)
 VCS_FLAGS  += -o $(OUT_DIR)/simv
 VCS_FLAGS  += -Mdir=$(OUT_DIR)/csrc

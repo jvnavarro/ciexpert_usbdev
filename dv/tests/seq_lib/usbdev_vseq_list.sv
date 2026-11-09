@@ -13,3 +13,4 @@
 `include "usbdev_data_toggle_clear_vseq.sv"
 `include "usbdev_av_buffer_vseq.sv"
 `include "usbdev_phy_config_pinflip_vseq.sv"
+`include "usbdev_phy_pins_sense_vseq.sv"
