@@ -23,8 +23,10 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
   // transmite (cio_usb_dp_en_o = 1) a linha está nos pinos _o, senão nos _i (host).
   // Todas as leituras dos pinos passam por aqui.
   function bit dut_driving(); return (vif.cio_usb_dp_en_o == 1'b1); endfunction
-  function bit line_dp();     return dut_driving() ? vif.cio_usb_dp_o : vif.cio_usb_dp_i; endfunction
-  function bit line_dn();     return dut_driving() ? vif.cio_usb_dn_o : vif.cio_usb_dn_i; endfunction
+  function bit raw_dp();      return dut_driving() ? vif.cio_usb_dp_o : vif.cio_usb_dp_i; endfunction
+  function bit raw_dn();      return dut_driving() ? vif.cio_usb_dn_o : vif.cio_usb_dn_i; endfunction
+  function bit line_dp();     return cfg.pinflip ? raw_dn() : raw_dp(); endfunction
+  function bit line_dn();     return cfg.pinflip ? raw_dp() : raw_dn(); endfunction
 
   // Estados da linha
   function bit line_is_j();   return (line_dp() == 1'b1 && line_dn() == 1'b0); endfunction
@@ -40,8 +42,17 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
     bit [3:0] current_endp = 4'h0;
 
     forever begin
+      if (cfg != null && !cfg.en_monitor) begin
+        @(posedge vif.clk_i);
+        continue;
+      end
+
       // 1. Aguarda a linha sair do J-State: K = início de pacote, SE0 = possível reset
       wait_for_start_of_packet(is_se0);
+
+      if (cfg != null && !cfg.en_monitor) begin
+        continue;
+      end
 
       // 2. Instancia o objeto para guardar os dados da transação capturada
       trans = usb_transaction::type_id::create("trans");
@@ -81,9 +92,11 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
   // Task auxiliar: espera sair do J-State e diz se a linha foi para K ou SE0
   task wait_for_start_of_packet(output bit is_se0);
     @(posedge vif.clk_i);
-    // Enquanto não for K nem SE0 (J ou SE1), continua aguardando
-    while (!line_is_k() && !line_is_se0()) begin
-      if (!line_is_j()) `uvm_warning(`gfn, "Linha em SE1 (D+=1, D-=1) enquanto aguardava inicio de pacote")
+    // Enquanto o monitor estiver desabilitado ou a linha estiver em repouso (J ou SE1)
+    while ((cfg != null && !cfg.en_monitor) || (!line_is_k() && !line_is_se0())) begin
+      if ((cfg == null || cfg.en_monitor) && !line_is_j()) begin
+        `uvm_warning(`gfn, "Linha em SE1 (D+=1, D-=1) enquanto aguardava inicio de pacote")
+      end
       @(posedge vif.clk_i);
     end
     is_se0 = line_is_se0();
@@ -207,6 +220,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
             trans.addr = token_payload[6:0];
             trans.endp = token_payload[10:7];
           end
+          trans.crc5 = {<<{token_payload[15:11]}};
         end
 
         usb_transaction::PID_DATA0,
@@ -233,6 +247,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
             // Os 2 últimos bytes são o CRC16: ficam fora do payload
             trans.data = new[bytes.size() - 2];
             foreach (trans.data[i]) trans.data[i] = bytes[i];
+            trans.crc16 = {<<{bytes[bytes.size() - 2], bytes[bytes.size() - 1]}};
           end
         end
 

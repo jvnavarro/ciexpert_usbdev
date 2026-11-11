@@ -9,7 +9,7 @@
 ## 1. Diagramas de Arquitetura
 
 ![Estrutura do repositório USBDEV](doc/usb_dev_repositorio.drawio.svg)
-![Diagrama de Blocos](esquema_simples.drawio.svg)
+![Diagrama de Blocos](doc/diagrama_blocos.drawio.svg)
 
 ### Topologia do Ambiente UVM
 
@@ -157,3 +157,120 @@ make wave            # Abre o Verdi com o arquivo gerado
 | `device_address` | Endereço USB atribuído ao periférico (7 bits) |
 
 ---
+
+## 6. Teste IN e Análise de Cobertura
+
+### 6.1. Teste `usbdev_in_trans_vseq`
+
+A sequência `usbdev_in_trans_vseq`, localizada em
+`dv/tests/seq_lib/usbdev_in_trans_vseq.sv`, integra o ambiente
+de verificação USB 2.0 e exercita o cenário de transação IN.
+
+O teste utiliza a infraestrutura UVM do projeto, incluindo
+virtual sequencer, agente USB 2.0, driver, monitor e scoreboard.
+
+### 6.2. Execução das simulações
+
+Foram executadas 10 seeds, numeradas de 1 a 10, utilizando
+o simulador Synopsys VCS W-2024.09-SP2-3.
+
+Resultado:
+- Seeds executadas: 10
+- Seeds aprovadas: 10
+- Seeds com falha: 0
+- Taxa de aprovação: 100%
+
+### 6.3. Metodologia de cobertura
+
+A cobertura foi inicialmente medida com a configuração
+original do projeto.
+
+Posteriormente, foram aplicados os arquivos de exclusão
+`.el` provenientes da OpenTitan.
+
+Por fim, o teste foi recompilado e executado utilizando
+a configuração de cobertura baseada no fluxo `vcs_cov`
+da OpenTitan, incluindo opções de instrumentação,
+configuração de hierarquia e arquivos de exclusão.
+
+Os arquivos de referência foram obtidos da OpenTitan,
+commit `5b83d34b99`.
+
+Para reproduzir a execução, a partir de `dv/`:
+
+```bash
+cov_ot/run_cov_ot.sh usbdev_in_trans_vseq 10
+```
+
+O relatório é gerado em:
+
+`dv/out_cov_ot/urg_report/dashboard.txt`
+
+### 6.4. Resultados de cobertura
+
+| Métrica | Original | Exclusões .el | Configuração OpenTitan |
+|---|---:|---:|---:|
+| SCORE | 53,46% | 55,45% | 66,92% |
+| LINE | 72,67% | 72,71% | 82,12% |
+| COND | 54,27% | 54,62% | 63,47% |
+| TOGGLE | 50,27% | 50,27% | 82,62% |
+| FSM | 35,16% | 37,21% | 49,15% |
+| BRANCH | 67,37% | 67,95% | 77,03% |
+| ASSERT | 82,05% | 82,05% | 90,70% |
+| GROUP | 12,41% | 23,37% | 23,37% |
+
+A cobertura global passou de 53,46% para 66,92%,
+representando um aumento de 13,46 pontos percentuais.
+
+As diferenças entre as medições não decorrem apenas
+das exclusões: a configuração OpenTitan também altera
+opções de instrumentação e seleção da hierarquia.
+
+### 6.5. Comparação com a OpenTitan
+
+O valor de referência anteriormente levantado para
+a cobertura da OpenTitan foi de 62,85%.
+
+A cobertura de 66,92% obtida neste projeto ficou
+numericamente 4,07 pontos percentuais acima dessa
+referência.
+
+Entretanto, os resultados não demonstram superioridade
+do teste desenvolvido, pois não foi comprovada
+equivalência completa entre os ambientes, conjuntos
+de testes e critérios de cálculo.
+
+### 6.6. Limitações identificadas
+
+Durante a geração do relatório, o URG apresentou avisos
+de incompatibilidade nos arquivos de exclusão:
+
+- 9 avisos de instâncias desconhecidas;
+- 27 avisos de identificadores de condições inválidos;
+- 1 aviso de identificador de branch inválido;
+- 3 avisos de incompatibilidade de checksum.
+
+Esses avisos indicam que determinadas exclusões
+não puderam ser aplicadas.
+
+O ambiente também possui covergroups de cobertura
+funcional definidos em `dv/env/usbdev_env_cov.sv`,
+com chamadas de amostragem no scoreboard.
+
+A métrica GROUP atingiu 23,37%, mas sua comparação
+com resultados externos exige verificar a equivalência
+dos modelos de cobertura funcional.
+
+### 6.7. Conclusão
+
+A sequência `usbdev_in_trans_vseq` foi executada com
+sucesso nas 10 seeds avaliadas, sem falhas registradas.
+
+A configuração de cobertura baseada na OpenTitan
+produziu SCORE global de 66,92%, fornecendo uma
+referência quantitativa para a avaliação do teste.
+
+A comparação com os 62,85% atribuídos à OpenTitan
+é indicativa e deve ser interpretada considerando
+as diferenças metodológicas e as incompatibilidades
+identificadas nos arquivos de exclusão.

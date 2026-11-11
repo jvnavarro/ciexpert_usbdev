@@ -34,6 +34,8 @@ class usb_transaction extends uvm_sequence_item;
   rand bit [10:0] frame_num;
 
   // Preenchidos pelo agente (não randomizados):
+  bit [4:0]  crc5;   // monitor: CRC5 capturado em pacotes Token/SOF
+  bit [15:0] crc16;  // monitor: CRC16 capturado em pacotes DATA
   bit want_rsp;    // req: 1 = a sequência quer a resposta do DUT (vai chamar get_response)
   bit no_response; // rsp do driver: 1 = o DUT não respondeu a tempo
   bit from_device; // monitor: 1 = pacote enviado pelo DUT, 0 = pelo host
@@ -78,6 +80,8 @@ class usb_transaction extends uvm_sequence_item;
     `uvm_field_array_int(data, UVM_DEFAULT)
     `uvm_field_int(reset_us, UVM_DEFAULT)
     `uvm_field_int(idle_bits, UVM_DEFAULT)
+    `uvm_field_int(crc5, UVM_DEFAULT)
+    `uvm_field_int(crc16, UVM_DEFAULT)
     `uvm_field_int(want_rsp, UVM_DEFAULT)
     `uvm_field_int(no_response, UVM_DEFAULT)
     `uvm_field_int(from_device, UVM_DEFAULT)
