@@ -1,5 +1,5 @@
-// Sequenciador do agente USB 2.0
-// Herda da classe base de sequenciadores do OpenTitan (dv_base_sequencer)
+// USB 2.0 agent sequencer
+// Extends the OpenTitan base sequencer (dv_base_sequencer)
 class usb20_sequencer extends dv_base_sequencer #(
   .ITEM_T (usb_transaction),
   .CFG_T  (usb20_agent_cfg)
