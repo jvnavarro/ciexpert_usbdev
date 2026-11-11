@@ -1,11 +1,11 @@
 class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (usb20_agent_cfg));
   `uvm_component_utils(usb20_monitor)
   virtual usb20_if vif;
-  // Variáveis para desfazer o NRZI e o Bit Stuffing
+  // Variables used to undo NRZI and bit stuffing
   bit prev_dp;
   int ones_cnt;
 
-  // Duração mínima de SE0 para ser bus reset: 2.5 us pela spec USB (48 ciclos = 1 us)
+  // Min SE0 duration for a bus reset: 2.5 us per the USB spec (48 cycles = 1 us)
   localparam int unsigned CYCLES_PER_US   = 48;
   localparam int unsigned RESET_MIN_CYCLES = (5 * CYCLES_PER_US) / 2;
 
@@ -15,25 +15,25 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     if (!uvm_config_db#(virtual usb20_if)::get(this, "", "vif", vif)) begin
-      `uvm_fatal(`gfn, "Nao foi possivel obter a virtual interface 'vif' do config_db no Monitor!")
+      `uvm_fatal(`gfn, "Monitor could not get the virtual interface 'vif' from the config_db")
     end
   endfunction
 
-  // Pinos do barramento. No tb as duas direções são fios separados: quando o DUT
-  // transmite (cio_usb_dp_en_o = 1) a linha está nos pinos _o, senão nos _i (host).
-  // Todas as leituras dos pinos passam por aqui.
+  // Bus pins. In the tb each direction has its own wires: when the DUT is
+  // sending (cio_usb_dp_en_o = 1) the line is on the _o pins, otherwise on _i (host).
+  // All pin reads go through here.
   function bit dut_driving(); return (vif.cio_usb_dp_en_o == 1'b1); endfunction
   function bit raw_dp();      return dut_driving() ? vif.cio_usb_dp_o : vif.cio_usb_dp_i; endfunction
   function bit raw_dn();      return dut_driving() ? vif.cio_usb_dn_o : vif.cio_usb_dn_i; endfunction
   function bit line_dp();     return cfg.pinflip ? raw_dn() : raw_dp(); endfunction
   function bit line_dn();     return cfg.pinflip ? raw_dp() : raw_dn(); endfunction
 
-  // Estados da linha
+  // Line states
   function bit line_is_j();   return (line_dp() == 1'b1 && line_dn() == 1'b0); endfunction
   function bit line_is_k();   return (line_dp() == 1'b0 && line_dn() == 1'b1); endfunction
   function bit line_is_se0(); return (line_dp() == 1'b0 && line_dn() == 1'b0); endfunction
 
-  // Task gerenciada pela classe pai dv_base_monitor
+  // Task called by the parent class dv_base_monitor
   virtual protected task collect_trans();
     usb_transaction trans;
     bit is_se0;
@@ -47,18 +47,18 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
         continue;
       end
 
-      // 1. Aguarda a linha sair do J-State: K = início de pacote, SE0 = possível reset
+      // 1. Wait for the line to leave J: K = start of packet, SE0 = possible reset
       wait_for_start_of_packet(is_se0);
 
       if (cfg != null && !cfg.en_monitor) begin
         continue;
       end
 
-      // 2. Instancia o objeto para guardar os dados da transação capturada
+      // 2. Create the item that stores the captured transaction
       trans = usb_transaction::type_id::create("trans");
-      trans.from_device = dut_driving(); // quem começou a transmitir
+      trans.from_device = dut_driving(); // who started sending
 
-      // 3. Coleta o reset ou o pacote
+      // 3. Collect the reset or the packet
       if (is_se0) begin
         collect_bus_reset(trans, valid);
         current_dir_in = 1'b0;
@@ -66,7 +66,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
       end else begin
         collect_packet(trans, valid);
 
-        // No protocolo USB, pacotes DATA e Handshakes herdam a direcao e o EP do Token anterior
+        // In USB, DATA and handshake packets take the direction and EP of the previous token
         if (trans.pid == usb_transaction::PID_IN) begin
           current_dir_in = 1'b1;
           current_endp   = trans.endp;
@@ -81,39 +81,39 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
         end
       end
 
-      // 4. Só envia para o Scoreboard o que foi reconhecido como válido
+      // 4. Only valid items are sent to the scoreboard
       if (valid) begin
-        `uvm_info(`gfn, {"TRACE: Item capturado pelo Monitor:\n", trans.sprint()}, UVM_LOW)
+        `uvm_info(`gfn, {"TRACE: Item captured by the monitor:\n", trans.sprint()}, UVM_LOW)
         analysis_port.write(trans);
       end
     end
   endtask
 
-  // Task auxiliar: espera sair do J-State e diz se a linha foi para K ou SE0
+  // Helper task: waits for the line to leave J and reports whether it went to K or SE0
   task wait_for_start_of_packet(output bit is_se0);
     @(posedge vif.clk_i);
-    // Enquanto o monitor estiver desabilitado ou a linha estiver em repouso (J ou SE1)
+    // While the monitor is disabled or the line is idle (J or SE1)
     while ((cfg != null && !cfg.en_monitor) || (!line_is_k() && !line_is_se0())) begin
       if ((cfg == null || cfg.en_monitor) && !line_is_j()) begin
-        `uvm_warning(`gfn, "Linha em SE1 (D+=1, D-=1) enquanto aguardava inicio de pacote")
+        `uvm_warning(`gfn, "Line in SE1 (D+=1, D-=1) while waiting for start of packet")
       end
       @(posedge vif.clk_i);
     end
     is_se0 = line_is_se0();
-    `uvm_info(`gfn, is_se0 ? "TRACE: SE0 detectado (possivel bus reset)"
-                           : "TRACE: K detectado (inicio do pacote)", UVM_HIGH)
+    `uvm_info(`gfn, is_se0 ? "TRACE: SE0 detected (possible bus reset)"
+                           : "TRACE: K detected (start of packet)", UVM_HIGH)
 
-    // Inicializa as variáveis para desfazer o NRZI e o Bit Stuffing
-    prev_dp  = 1'b1; // a linha estava em J (D+=1)
+    // Initialize the NRZI and bit stuffing variables
+    prev_dp  = 1'b1; // the line was in J (D+=1)
     ones_cnt = 0;
   endtask
 
-  // Mede quanto tempo a linha fica em SE0. Só é bus reset se durar >= 2.5 us;
-  // SE0 mais curto é ignorado.
+  // Measures how long the line stays in SE0. It is a bus reset only if it lasts >= 2.5 us;
+  // a shorter SE0 is ignored.
   task collect_bus_reset(usb_transaction trans, output bit valid);
     int unsigned count_cycles = 0;
 
-    // A linha já está em SE0 (wait_for_start_of_packet garantiu): conta até voltar
+    // The line is already in SE0 (ensured by wait_for_start_of_packet): count until it leaves
     while (line_is_se0()) begin
       count_cycles++;
       @(posedge vif.clk_i);
@@ -124,41 +124,41 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
       trans.kind     = usb_transaction::USB_ITEM_BUS_RESET;
       trans.reset_us = count_cycles / CYCLES_PER_US;
     end else begin
-      `uvm_warning(`gfn, $sformatf("SE0 de %0d ciclos e curto demais para bus reset, ignorando",
+      `uvm_warning(`gfn, $sformatf("SE0 of %0d cycles is too short for a bus reset, ignoring",
                                    count_cycles))
     end
   endtask
 
-  // Lê o próximo bit. eop = 1 se a linha estava em SE0 (fim de pacote): nesse caso
-  // out_bit não vale nada e o NRZI/stuffing não é atualizado.
+  // Reads the next bit. eop = 1 if the line was in SE0 (end of packet): in that case
+  // out_bit is not valid and the NRZI/stuffing state is not updated.
   task get_next_bit(output bit out_bit, output bit eop);
     bit current_dp;
 
-    // 1. Espera até o meio do "bit time" (2 ciclos de 48MHz) para ler com precisão
+    // 1. Wait until the middle of the bit time (2 cycles at 48 MHz) to sample reliably
     repeat (2) @(posedge vif.clk_i);
     eop = line_is_se0();
     if (eop) return;
     current_dp = line_dp();
 
-    // 2. Desfaz o NRZI
+    // 2. Undo NRZI
     if (current_dp == prev_dp) begin
-      out_bit = 1'b1; // Se a energia não mudou, o bit real era '1'
+      out_bit = 1'b1; // line did not change: the bit is '1'
       ones_cnt++;
     end else begin
-      out_bit = 1'b0; // Se a energia inverteu, o bit real era '0'
+      out_bit = 1'b0; // line toggled: the bit is '0'
       ones_cnt = 0;
     end
 
-    prev_dp = current_dp; // Guarda para o próximo ciclo
+    prev_dp = current_dp; // keep it for the next bit
 
-    // 3. Completa a segunda metade do "bit time" (mais 2 ciclos)
+    // 3. Finish the second half of the bit time (2 more cycles)
     repeat (2) @(posedge vif.clk_i);
 
-    // 4. Desfaz o Bit Stuffing (Unstuffing)
+    // 4. Undo bit stuffing (unstuffing)
     if (ones_cnt == 6) begin
-      // O OpenTitan injetou um '0' falso aqui. Vamos "queimar" o tempo dele (4 ciclos)
+      // The sender inserted a stuffed '0' here: skip its bit time (4 cycles)
       repeat (2) @(posedge vif.clk_i);
-      prev_dp = line_dp(); // Atualiza a referência, pois o '0' falso inverteu o pino
+      prev_dp = line_dp(); // update the reference, since the stuffed '0' toggled the pin
       repeat (2) @(posedge vif.clk_i);
       ones_cnt = 0;
     end
@@ -176,31 +176,31 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
 
     valid = 1'b1;
 
-    // 1. Lê o byte de SYNC
+    // 1. Read the SYNC byte
     for (int i = 0; i < 8; i++) begin
       get_next_bit(raw_bit, eop);
       sync_byte[i] = raw_bit;
     end
-    // SYNC: os bits no fio são 0,0,0,0,0,0,0,1 e o bit i vai para sync_byte[i] -> 8'h80
+    // SYNC: the bits on the wire are 0,0,0,0,0,0,0,1 and bit i goes to sync_byte[i] -> 8'h80
     if (sync_byte != 8'h80) begin
-      `uvm_error(`gfn, $sformatf("SYNC invalido: 0x%02h (esperado 0x80)", sync_byte))
+      `uvm_error(`gfn, $sformatf("Invalid SYNC: 0x%02h (expected 0x80)", sync_byte))
       valid = 1'b0;
     end
 
-    // 2. Lê o byte de PID
+    // 2. Read the PID byte
     for (int i = 0; i < 8; i++) begin
       get_next_bit(raw_bit, eop);
       pid_byte[i] = raw_bit;
     end
-    // PID: os 4 bits de cima são o complemento dos 4 de baixo
+    // PID: the upper 4 bits are the complement of the lower 4
     if (valid && pid_byte[7:4] != ~pid_byte[3:0]) begin
-      `uvm_error(`gfn, $sformatf("PID invalido: 0x%02h (check bits nao batem)", pid_byte))
+      `uvm_error(`gfn, $sformatf("Invalid PID: 0x%02h (check bits do not match)", pid_byte))
       valid = 1'b0;
     end
 
-    // 3. Lê o payload dependendo do PID (só se SYNC e PID estão corretos)
+    // 3. Read the payload based on the PID (only if SYNC and PID are valid)
     if (valid) begin
-      // Pega só os 4 primeiros bits do PID (os outros 4 são a cópia invertida de segurança)
+      // Use only the lower 4 PID bits (the other 4 are the inverted check copy)
       trans.pid  = usb_transaction::usb_pid_e'(pid_byte[3:0]);
       trans.kind = usb_transaction::USB_ITEM_NORMAL;
 
@@ -209,7 +209,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
         usb_transaction::PID_IN,
         usb_transaction::PID_SETUP,
         usb_transaction::PID_SOF: begin
-          // Token ou SOF: exatamente 16 bits depois do PID (11 de campos + 5 de CRC5)
+          // Token or SOF: exactly 16 bits after the PID (11 field bits + 5 CRC5 bits)
           for (int i = 0; i < 16; i++) begin
             get_next_bit(raw_bit, eop);
             token_payload[i] = raw_bit;
@@ -225,7 +225,7 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
 
         usb_transaction::PID_DATA0,
         usb_transaction::PID_DATA1: begin
-          // É um pacote de Dados: lê bytes (LSB primeiro) até o EOP
+          // DATA packet: read bytes (LSB first) until the EOP
           bit_cnt = 0;
           forever begin
             get_next_bit(raw_bit, eop);
@@ -238,13 +238,13 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
             end
           end
           if (bit_cnt != 0) begin
-            `uvm_error(`gfn, $sformatf("DATA terminou com %0d bits sobrando (fora de um byte)", bit_cnt))
+            `uvm_error(`gfn, $sformatf("DATA ended with %0d leftover bits (not a full byte)", bit_cnt))
             valid = 1'b0;
           end else if (bytes.size() < 2) begin
-            `uvm_error(`gfn, $sformatf("DATA sem CRC16: so %0d bytes", bytes.size()))
+            `uvm_error(`gfn, $sformatf("DATA without CRC16: only %0d bytes", bytes.size()))
             valid = 1'b0;
           end else begin
-            // Os 2 últimos bytes são o CRC16: ficam fora do payload
+            // The last 2 bytes are the CRC16: keep them out of the payload
             trans.data = new[bytes.size() - 2];
             foreach (trans.data[i]) trans.data[i] = bytes[i];
             trans.crc16 = {<<{bytes[bytes.size() - 2], bytes[bytes.size() - 1]}};
@@ -254,23 +254,23 @@ class usb20_monitor extends dv_base_monitor #(.ITEM_T(usb_transaction),.CFG_T (u
         usb_transaction::PID_ACK,
         usb_transaction::PID_NAK,
         usb_transaction::PID_STALL: begin
-          // É Handshake! O pacote acaba no PID, não fazemos nada!
+          // Handshake: the packet ends after the PID, nothing else to read
         end
 
         default: begin
-          `uvm_error(`gfn, $sformatf("PID nao suportado pelo monitor: 0x%0h", pid_byte[3:0]))
+          `uvm_error(`gfn, $sformatf("PID not supported by the monitor: 0x%0h", pid_byte[3:0]))
           valid = 1'b0;
         end
       endcase
     end
 
-    // 4. Aguarda o End of Packet (SE0), mesmo em pacote inválido, para não
-    //    ressincronizar no meio do lixo
+    // 4. Wait for the End of Packet (SE0), even for an invalid packet, so we
+    //    do not resync in the middle of garbage
     while (!line_is_se0()) begin
       @(posedge vif.clk_i);
     end
 
-    // Espera a linha voltar para o estado de repouso (J-State) após o EOP
+    // Wait for the line to return to idle (J) after the EOP
     while (line_is_se0()) begin
       @(posedge vif.clk_i);
     end

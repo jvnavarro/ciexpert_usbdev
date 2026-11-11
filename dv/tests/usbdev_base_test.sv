@@ -12,7 +12,7 @@ class usbdev_base_test extends cip_base_test #(
     super.build_phase(phase);
   endfunction
 
-  // NÃO COLOQUE A RUN_PHASE AQUI.
-  // A classe pai 'cip_base_test' já cuida do randomize() e start() da sequência
+  // Do not add a run_phase here.
+  // The parent class 'cip_base_test' already randomizes and starts the sequence.
 
 endclass

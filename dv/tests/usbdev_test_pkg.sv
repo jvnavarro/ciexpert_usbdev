@@ -1,4 +1,4 @@
-// Pacote de testes do usbdev
+// usbdev test package
 package usbdev_test_pkg;
 
   import uvm_pkg::*;

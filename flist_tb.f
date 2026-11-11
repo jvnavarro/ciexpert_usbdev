@@ -1,5 +1,5 @@
 // ==============================================================================
-// Filelist: Testbench UVM com CIP_LIB (ciexpert_usbdev)
+// Filelist: UVM testbench with the CIP library (ciexpert_usbdev)
 // ==============================================================================
 
 // Include directories
@@ -30,7 +30,7 @@
 +incdir+dv/tests
 +incdir+dv/tests/seq_lib
 
-// 1. Pacotes DV Fundamentais (ordem de dependência):
+// 1. Core DV packages (dependency order):
 dv/cip_infra/bus_params_pkg/bus_params_pkg.sv
 dv/cip_infra/str_utils/str_utils_pkg.sv
 dv/cip_infra/dv_utils/dv_test_status_pkg.sv
@@ -49,7 +49,7 @@ dv/cip_infra/push_pull_agent/push_pull_agent_pkg.sv
 dv/cip_infra/cip_lib/cip_base_pkg.sv
 dv/cip_infra/ral/usbdev_ral_pkg.sv
 
-// 2. Pacotes do projeto: agente USB 2.0, env (com vseqs) e testes:
+// 2. Project packages: USB 2.0 agent, env (with vseqs) and tests:
 dv/agent/usb20_agent_pkg.sv
 dv/env/usbdev_env_pkg.sv
 dv/tests/usbdev_test_pkg.sv
@@ -66,5 +66,5 @@ dv/cip_infra/sec_cm/prim_onehot_check_if.sv
 dv/cip_infra/sec_cm/sec_cm_prim_onehot_check_bind.sv
 dv/tb/usb20_if.sv
 
-// 4. Testbench Top-Level:
+// 4. Testbench top level:
 dv/tb/tb.sv

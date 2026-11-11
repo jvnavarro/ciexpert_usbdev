@@ -1,5 +1,5 @@
 
-// A usbdev_base_vseq precisa ser a primeira (todas as outras estendem dela).
+// usbdev_base_vseq must be the first one (all the others extend it).
 `include "usbdev_base_vseq.sv"
 `include "usbdev_smoke_vseq.sv"
 `include "usbdev_in_trans_vseq.sv"
