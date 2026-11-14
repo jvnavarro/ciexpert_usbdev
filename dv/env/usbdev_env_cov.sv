@@ -1,11 +1,11 @@
-// Herda de cip_base_env_cov, que traz os recursos base de cobertura do OpenTitan
+// Extends cip_base_env_cov, which provides the base OpenTitan coverage features
 class usbdev_env_cov extends cip_base_env_cov #(
   .CFG_T(usbdev_env_cfg)
 );
 
   `uvm_component_utils(usbdev_env_cov)
 
-  // 1. PIDs enviados para o DUT (Host -> DUT)
+  // 1. PIDs sent to the DUT (host -> DUT)
   covergroup pids_to_dut_cg with function sample(usb_transaction::usb_pid_e pid);
     cp_pid: coverpoint pid {
       bins sof   = {usb_transaction::PID_SOF};
@@ -20,7 +20,7 @@ class usbdev_env_cov extends cip_base_env_cov #(
     }
   endgroup
 
-  // 2. PIDs enviados pelo DUT em resposta (DUT -> Host)
+  // 2. PIDs sent by the DUT in response (DUT -> host)
   covergroup pids_from_dut_cg with function sample(usb_transaction::usb_pid_e pid);
     cp_pid: coverpoint pid {
       bins data0 = {usb_transaction::PID_DATA0};
@@ -31,7 +31,7 @@ class usbdev_env_cov extends cip_base_env_cov #(
     }
   endgroup
 
-  // 3. Contadores de frame recebidos em pacotes SOF
+  // 3. Frame numbers received in SOF packets
   covergroup framenum_rx_cg with function sample(bit [10:0] frame);
     cp_frame: coverpoint frame {
       bins zero               = {0};
@@ -44,7 +44,7 @@ class usbdev_env_cov extends cip_base_env_cov #(
     }
   endgroup
 
-  // 4. Verificação de integridade CRC16 de dados
+  // 4. CRC16 integrity of data packets
   covergroup crc16_cg with function sample(bit dir_in, bit [15:0] crc16);
     cp_crc16: coverpoint crc16 {
       bins all_ones = {65535};
@@ -54,7 +54,7 @@ class usbdev_env_cov extends cip_base_env_cov #(
     cr_crc16_X_dir: cross cp_crc16, cp_dir;
   endgroup
 
-  // 5. Verificação de integridade CRC5 de tokens
+  // 5. CRC5 integrity of tokens
   covergroup crc5_cg with function sample(bit dir_in, bit [4:0] crc5);
     cp_crc5: coverpoint crc5 {
       bins trailing_zero = {15};
@@ -65,7 +65,7 @@ class usbdev_env_cov extends cip_base_env_cov #(
     cr_crc5_X_dir: cross cp_crc5, cp_dir;
   endgroup
 
-  // 6. Endereço do dispositivo e Endpoints
+  // 6. Device address and endpoints
   covergroup address_cg with function sample(bit [6:0] address, bit [4:0] endp);
     cp_address: coverpoint address {
       bins zero            = {0};
@@ -83,7 +83,7 @@ class usbdev_env_cov extends cip_base_env_cov #(
     cr_address_X_endp: cross cp_address, cp_endp;
   endgroup
 
-  // 7. Modos de configuração de Endpoint OUT
+  // 7. OUT endpoint configuration modes
   covergroup ep_out_cfg_cg with function sample(usb_transaction::usb_pid_e pid, bit out_enable, bit rxenable_setup,
                                                 bit rxenable_out, bit set_nak_out, bit out_stall,
                                                 bit out_iso);
@@ -102,7 +102,7 @@ class usbdev_env_cov extends cip_base_env_cov #(
                              cp_rxenable_out, cp_set_nak_out, cp_out_iso, cp_out_stall;
   endgroup
 
-  // 8. Modos de configuração de Endpoint IN
+  // 8. IN endpoint configuration modes
   covergroup ep_in_cfg_cg with function sample(usb_transaction::usb_pid_e pid,
                                                bit in_enable, bit in_stall, bit in_iso);
     cp_pid: coverpoint pid {
@@ -116,7 +116,7 @@ class usbdev_env_cov extends cip_base_env_cov #(
     cr_pid_x_epconfig: cross cp_pid, cp_in_enable, cp_in_iso, cp_in_stall;
   endgroup
 
-  // 9. Níveis de preenchimento das FIFOs
+  // 9. FIFO fill levels
   covergroup fifo_lvl_cg with function sample(usb_transaction::usb_pid_e pid, bit [2:0] avsetup_lvl,
                                               bit [3:0] avout_lvl, bit [3:0] rx_lvl);
     cp_avsetup: coverpoint avsetup_lvl {
@@ -141,7 +141,7 @@ class usbdev_env_cov extends cip_base_env_cov #(
     cr_fifo_X_pid: cross cp_avsetup, cp_avout, cp_rx, cp_pid;
   endgroup
 
-  // 10. Tamanho dos pacotes de dados
+  // 10. Data packet sizes
   covergroup data_pkt_cg with function sample(bit dir_in, bit [6:0] pkt_len);
       cp_pkt_len: coverpoint pkt_len {
       bins zero       = {0};
@@ -158,7 +158,7 @@ class usbdev_env_cov extends cip_base_env_cov #(
     cr_pktlen_X_dir: cross cp_pkt_len, cp_dir;
   endgroup
 
-  // 11. Data Toggle por Endpoint (O principal do teste)
+  // 11. Data toggle per endpoint
   covergroup data_tog_endp_cg with function sample(usb_transaction::usb_pid_e pid, bit dir_in, bit [3:0] endp);
     cp_pid: coverpoint pid {
       bins data0 = {usb_transaction::PID_DATA0};
@@ -173,7 +173,7 @@ class usbdev_env_cov extends cip_base_env_cov #(
     cr_pid_X_dir_X_endp: cross cp_pid, cp_dir, cp_endp;
   endgroup
 
-  // 12. Tipos de token por Endpoint
+  // 12. Token types per endpoint
   covergroup pid_type_endp_cg with function sample(usb_transaction::usb_pid_e pid, bit [3:0] endp);
     cp_pid: coverpoint pid {
       bins pkt_types[] = {usb_transaction::PID_SETUP, usb_transaction::PID_OUT, usb_transaction::PID_IN};
@@ -185,7 +185,7 @@ class usbdev_env_cov extends cip_base_env_cov #(
     cr_pid_X_endp: cross cp_pid, cp_endp;
   endgroup
 
-  // Construtor: instancia todos os 12 covergroups
+  // Constructor: creates all 12 covergroups
   function new(string name = "usbdev_env_cov", uvm_component parent = null);
     super.new(name, parent);
     pids_to_dut_cg   = new();

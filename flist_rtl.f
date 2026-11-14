@@ -1,13 +1,13 @@
 // ==============================================================================
-// Filelist: RTL usbdev e dependencias (OpenTitan)
+// Filelist: usbdev RTL and dependencies (OpenTitan)
 // ==============================================================================
 
-// Include directories para macros e headers
+// Include directories for macros and headers
 +incdir+rtl/prim
 +incdir+rtl/tlul
 +incdir+rtl/usbdev
 
-// 1. Packages Primitivos e de Suporte (Ordem de Dependencia)
+// 1. Primitive and support packages (dependency order)
 rtl/prim/prim_util_pkg.sv
 rtl/prim/prim_count_pkg.sv
 rtl/prim/prim_mubi_pkg.sv

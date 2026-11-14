@@ -15,8 +15,8 @@ virtual task body();
 
     start_item(req);
     
-    // Passo 2: Randomiza, mas com REGRAS específicas!
-    // Forçamos a ser um pacote normal (não um reset) e forçamos o PID a ser OUT
+    // Randomize the item. The enviar_* flags select the kind and PID
+    // (default: OUT token); IN/OUT/SETUP tokens use device address 0x12 and endpoint 2.
     if (!req.randomize() with { 
         kind == (local::enviar_reset ? USB_ITEM_BUS_RESET : USB_ITEM_NORMAL); 
         pid == (local::enviar_ack ? PID_ACK :
@@ -28,10 +28,10 @@ virtual task body();
     endp == 4'd2;
 }
     }) begin
-      `uvm_fatal(get_type_name(), "Falha ao randomizar usb_transaction")
+      `uvm_fatal(get_type_name(), "Failed to randomize usb_transaction")
     end
     
-    // Passo 3: O pacote está pronto e randomizado (dentro das regras), envia pro Driver!
+    // For DATA0, ask for the DUT response and keep a copy of the payload
     if (enviar_data0) begin
     req.want_rsp = 1'b1;
     dados_enviados = new[req.data.size()];
@@ -46,11 +46,11 @@ if (enviar_data0) begin
 
     if (rsp.pid !== usb_transaction::PID_ACK) begin
         `uvm_error(get_type_name(),
-            $sformatf("Esperado ACK apos DATA0, recebido PID=0x%0h", rsp.pid))
+            $sformatf("Expected ACK after DATA0, got PID=0x%0h", rsp.pid))
     end
     else begin
         `uvm_info(get_type_name(),
-            "PASS: USBDEV respondeu ACK ao pacote DATA0",
+            "PASS: USBDEV replied ACK to the DATA0 packet",
             UVM_LOW)
     end
 end
