@@ -8,3 +8,4 @@
 `include "usbdev_phy_config_pinflip_vseq.sv"
 `include "usbdev_phy_pins_sense_vseq.sv"
 `include "usbdev_pkt_buffer_vseq.sv"
+`include "usbdev_av_overflow_vseq.sv"
