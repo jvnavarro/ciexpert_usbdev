@@ -1,6 +1,6 @@
-// Testbench top do usbdev (padrao CIP OpenTitan)
+// usbdev testbench top (OpenTitan CIP style)
 module tb;
-  // Importação das bibliotecas necessárias no topo do módulo
+  // Import the required libraries
   import uvm_pkg::*;
   import dv_utils_pkg::*;
   import usbdev_env_pkg::*;
@@ -11,27 +11,27 @@ module tb;
   `include "dv_macros.svh"
   `include "cip_macros.svh"
 
-  // Sinais de clock e reset (gerados pelo clk_rst_if, 48 MHz definido no env_cfg)
+  // Clock and reset signals (driven by clk_rst_if, 48 MHz set in env_cfg)
   wire clk, rst_n;
-  // Clock always-on (~200 kHz)
+  // Always-on clock (~200 kHz)
   bit  clk_aon;
   wire [NUM_MAX_INTERRUPTS-1:0] interrupts;
 
   always #2500ns clk_aon = ~clk_aon;
 
-  // Interfaces CIP
+  // CIP interfaces
   clk_rst_if clk_rst_if (.clk(clk), .rst_n(rst_n));
   pins_if #(NUM_MAX_INTERRUPTS) intr_if (interrupts);
   tl_if tl_if (.clk(clk), .rst_n(rst_n));
   `DV_ALERT_IF_CONNECT()
 
-  // Interface física USB 2.0 (agente do projeto)
+  // USB 2.0 physical interface (project agent)
   usb20_if usb20_if_inst (
     .clk_i (clk),
     .rst_ni(rst_n)
   );
 
-  // D+/D- (cio_usb_d*_i) sao controlados pelo usb20_driver; VBUS sempre presente
+  // D+/D- (cio_usb_d*_i) are driven by usb20_driver; VBUS is always present
   assign usb20_if_inst.cio_sense_i  = 1'b1;
 
   // DUT
@@ -98,9 +98,7 @@ module tb;
     .intr_av_setup_empty_o        (interrupts[17])
   );
 
-  //assign interrupts[NUM_MAX_INTERRUPTS-1:18] = '0;
-
-  // Ponte UVM: publica as interfaces e inicia a simulação
+  // UVM bridge: publishes the interfaces and starts the simulation
   initial begin
     clk_rst_if.set_active();
     uvm_config_db#(virtual clk_rst_if)::set(null, "*.env", "clk_rst_vif", clk_rst_if);

@@ -1,6 +1,6 @@
 package usb20_agent_pkg;
 
-  // 1. Importação de dependências globais
+  // 1. Import global dependencies
   import uvm_pkg::*;
   `include "uvm_macros.svh"
 
@@ -8,7 +8,7 @@ package usb20_agent_pkg;
   import dv_base_reg_pkg::*;
   import dv_base_agent_pkg::*;
 
-  // 2. Inclusão dos arquivos do agente (na ordem correta)
+  // 2. Include the agent files (order matters)
   `include "usb_transaction.sv"
   `include "usb20_agent_cfg.sv"
   `include "usb20_sequencer.sv"

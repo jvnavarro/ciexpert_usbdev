@@ -14,7 +14,6 @@ class usbdev_virtual_sequencer extends cip_base_virtual_sequencer #(
     super.build_phase(phase);
   endfunction
 
-  // Fase de conexão (onde no futuro residirão os handles para os sequenciadores dos agentes)
   virtual function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
   endfunction

@@ -1,3 +1,3 @@
-// Lista das sequencias do agente USB 2.0 (incluida pelo usb20_agent_pkg).
-// Para criar uma nova sequencia, adicione o arquivo nesta pasta e uma linha de include abaixo.
+// List of the USB 2.0 agent sequences (included by usb20_agent_pkg).
+// To add a new sequence, put the file in this folder and add an include line below.
 `include "usb20_basic_seq.sv"

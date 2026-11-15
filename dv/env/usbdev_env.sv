@@ -14,7 +14,7 @@ class usbdev_env extends cip_base_env #(
   endfunction
 
   virtual function void build_phase(uvm_phase phase);
-    super.build_phase(phase); //  chama a construção da classe pai
+    super.build_phase(phase); // build the parent class first
 
     uvm_config_db#(usb20_agent_cfg)::set(this, "m_usb20_agent*", "cfg", cfg.m_usb20_agent_cfg);
     m_usb20_agent = usb20_agent::type_id::create("m_usb20_agent", this);
@@ -23,12 +23,12 @@ class usbdev_env extends cip_base_env #(
   virtual function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
     
-    // Conecta o sequenciador do agente ao virtual sequencer
+    // Connect the agent sequencer to the virtual sequencer
     if (cfg.m_usb20_agent_cfg.is_active) begin
       virtual_sequencer.usb20_sequencer_h = m_usb20_agent.sequencer;
     end
     
-    // Conecta a porta de análise do monitor USB à FIFO do scoreboard
+    // Connect the USB monitor analysis port to the scoreboard
     if (cfg.en_scb) begin
       m_usb20_agent.monitor.analysis_port.connect(scoreboard.usb20_fifo);
     end
