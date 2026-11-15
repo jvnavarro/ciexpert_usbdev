@@ -22,14 +22,35 @@ package usbdev_env_pkg;
   // Estados do link (campo usbstat.link_state), espelho do enum em
   // rtl/usbdev/usbdev_linkstate.sv
   typedef enum bit [2:0] {
-    LinkDisconnected     = 0, // sem VBUS ou sem pull-up
-    LinkPowered          = 1, // conectado, aguardando bus reset
+    LinkDisconnected     = 0,  // sem VBUS ou sem pull-up
+    LinkPowered          = 1,  // conectado, aguardando bus reset
     LinkPoweredSuspended = 2,
-    LinkActive           = 3, // ativo e recebendo SOF
+    LinkActive           = 3,  // ativo e recebendo SOF
     LinkSuspended        = 4,
-    LinkActiveNoSOF      = 5, // ativo apos o bus reset, ainda sem SOF
+    LinkActiveNoSOF      = 5,  // ativo apos o bus reset, ainda sem SOF
     LinkResuming         = 6
   } usbdev_link_state_e;
+
+  typedef enum int {
+    IntrPktReceived   = 0,
+    IntrPktSent       = 1,
+    IntrDisconnected  = 2,
+    IntrHostLost      = 3,
+    IntrLinkReset     = 4,
+    IntrLinkSuspend   = 5,
+    IntrLinkResume    = 6,
+    IntrAvOutEmpty    = 7,
+    IntrRxFull        = 8,
+    IntrAvOverflow    = 9,
+    IntrLinkInErr     = 10,
+    IntrRxCrcErr      = 11,
+    IntrRxPidErr      = 12,
+    IntrRxBitstuffErr = 13,
+    IntrFrame         = 14,
+    IntrPowered       = 15,
+    IntrLinkOutErr    = 16,
+    IntrAvSetupEmpty  = 17
+  } usbdev_intr_e;
 
   // Ambiente
   `include "usbdev_env_cfg.sv"
