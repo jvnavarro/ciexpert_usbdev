@@ -16,6 +16,15 @@ module tb;
   // Always-on clock (~200 kHz)
   bit  clk_aon;
   wire [NUM_MAX_INTERRUPTS-1:0] interrupts;
+  // Interconnect signals between usbdev (dut) and usbdev_aon_wake
+  logic usbdev_dp_pullup_en;
+  logic usbdev_dn_pullup_en;
+  logic usb_aon_suspend_req;
+  logic usb_aon_wake_ack;
+  logic usb_aon_bus_reset;
+  logic usb_aon_sense_lost;
+  logic usb_aon_bus_not_idle;
+  logic usb_aon_wake_detect_active;
 
   always #2500ns clk_aon = ~clk_aon;
 
@@ -33,6 +42,36 @@ module tb;
 
   // D+/D- (cio_usb_d*_i) are driven by usb20_driver; VBUS is always present
   assign usb20_if_inst.cio_sense_i  = 1'b1;
+
+
+  // AON module
+
+
+  usbdev_aon_wake u_usbdev_aon_wake(
+    .clk_aon_i                (clk_aon),
+    .rst_aon_ni               (rst_n),
+    
+    // Raw asynchronous USB signals
+    .usb_dp_i                 (usb20_if_inst.cio_usb_dp_i),
+    .usb_dn_i                 (usb20_if_inst.cio_usb_dn_i),
+    .usb_sense_i              (usb20_if_inst.cio_sense_i),
+    // Signals from usbdev (dut)
+    .usbdev_dppullup_en_i     (usbdev_dp_pullup_en),
+    .usbdev_dnpullup_en_i     (usbdev_dn_pullup_en),
+    .wake_ack_aon_i           (usb_aon_wake_ack),
+    .suspend_req_aon_i        (usb_aon_suspend_req),
+
+    // External outputs (observed via usb20_if)
+    .usb_dppullup_en_o        (usb20_if_inst.usb_dp_pullup_en_o),
+    .usb_dnpullup_en_o        (usb20_if_inst.usb_dn_pullup_en_o),
+    .wake_req_aon_o           (usb20_if_inst.wake_req_aon_o),
+
+    // Status signals back to usbdev (dut)
+    .bus_not_idle_aon_o       (usb_aon_bus_not_idle),
+    .bus_reset_aon_o          (usb_aon_bus_reset),
+    .sense_lost_aon_o         (usb_aon_sense_lost),
+    .wake_detect_active_aon_o (usb_aon_wake_detect_active)
+  );
 
   // DUT
   usbdev dut (
@@ -59,18 +98,18 @@ module tb;
     .usb_tx_d_o                   (),
 
     .cio_sense_i                  (usb20_if_inst.cio_sense_i),
-    .usb_dp_pullup_o              (),
-    .usb_dn_pullup_o              (),
+    .usb_dp_pullup_o              (usbdev_dp_pullup_en),
+    .usb_dn_pullup_o              (usbdev_dn_pullup_en),
     .usb_rx_enable_o              (),
     .usb_tx_use_d_se0_o           (),
 
-    .usb_aon_suspend_req_o        (),
-    .usb_aon_wake_ack_o           (),
+    .usb_aon_suspend_req_o        (usb_aon_suspend_req),
+    .usb_aon_wake_ack_o           (usb_aon_wake_ack),
 
-    .usb_aon_bus_reset_i          (1'b0),
-    .usb_aon_sense_lost_i         (1'b0),
-    .usb_aon_bus_not_idle_i       (1'b0),
-    .usb_aon_wake_detect_active_i (1'b0),
+    .usb_aon_bus_reset_i          (usb_aon_bus_reset),
+    .usb_aon_sense_lost_i         (usb_aon_sense_lost),
+    .usb_aon_bus_not_idle_i       (usb_aon_bus_not_idle),
+    .usb_aon_wake_detect_active_i (usb_aon_wake_detect_active),
 
     .usb_ref_val_o                (),
     .usb_ref_pulse_o              (),
