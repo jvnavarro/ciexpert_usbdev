@@ -60,8 +60,10 @@ class usbdev_av_overflow_vseq extends usbdev_base_vseq;
     bit [4:0] id = $urandom_range(0, 31);
 
     if (is_setup) begin
-      csr_wr(.ptr(ral.avsetupbuffer), .value(id)); //avisar qual esta sendo testada...
+      `uvm_info(get_type_name(), $sformatf("Testing AV SETUP FIFO overflow (extra buffer id %0d)", id), UVM_LOW)
+      csr_wr(.ptr(ral.avsetupbuffer), .value(id));
     end else begin
+      `uvm_info(get_type_name(), $sformatf("Testing AV OUT FIFO overflow (extra buffer id %0d)", id), UVM_LOW)
       csr_wr(.ptr(ral.avoutbuffer), .value(id));
     end
   endtask
