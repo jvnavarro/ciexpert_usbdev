@@ -17,7 +17,7 @@ class usbdev_av_empty_vseq extends usbdev_smoke_vseq;
     // Push buffers, enable the corresponding interrupt, and send back-to-back packets
     if (is_setup == 1) begin
       for (int i = 0; i < 3; i++) csr_wr(.ptr(ral.avsetupbuffer), .value((setup_buf + 1 + i) % 32));
-      intr_en_val = get_field_mask(ral.intr_enable.av_setup_empty);
+      intr_en_val = ral.intr_enable.av_setup_empty.get_field_mask();
       csr_wr(.ptr(ral.intr_enable), .value(intr_en_val));
       for (int i = 0; i < 4; i++) send_and_check(is_setup, i);
       // 4
@@ -27,7 +27,7 @@ class usbdev_av_empty_vseq extends usbdev_smoke_vseq;
 
     end else begin
       for (int i = 0; i < 3; i++) csr_wr(.ptr(ral.avoutbuffer), .value((out_buf + 1 + i) % 32));
-      intr_en_val = get_field_mask(ral.intr_enable.av_out_empty);
+      intr_en_val = ral.intr_enable.av_out_empty.get_field_mask();
       csr_wr(.ptr(ral.intr_enable), .value(intr_en_val));
       for (int i = 0; i < 4; i++) send_and_check(is_setup, i);
       // 4.
@@ -90,7 +90,7 @@ class usbdev_av_empty_vseq extends usbdev_smoke_vseq;
 
     // Check the CSRs, clear pkt_received (W1C), and discard the RX FIFO entry
     csr_spinwait(.ptr(ral.intr_state.pkt_received), .exp_data(1'b1));
-    csr_wr(.ptr(ral.intr_state), .value(get_field_mask(ral.intr_state.pkt_received)));
+    csr_wr(.ptr(ral.intr_state), .value(ral.intr_state.pkt_received.get_field_mask()));
     csr_rd(.ptr(ral.rxfifo), .value(rxfifo_val));
   endtask
 
