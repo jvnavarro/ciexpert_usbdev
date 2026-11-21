@@ -13,3 +13,4 @@
 `include "usbdev_av_overflow_vseq.sv"
 `include "usbdev_av_empty_vseq.sv"
 `include "usbdev_pkt_received_vseq.sv"
+`include "usbdev_aon_wake_reset_vseq.sv"
