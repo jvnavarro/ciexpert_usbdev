@@ -10,3 +10,4 @@
 `include "usbdev_pkt_buffer_vseq.sv"
 `include "usbdev_phy_config_tx_osc_test_mode_vseq.sv"
 `include "usbdev_aon_wake_resume_vseq.sv"
+`include "usbdev_pkt_received_vseq.sv"

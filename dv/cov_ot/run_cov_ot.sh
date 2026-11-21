@@ -35,8 +35,11 @@ for s in $(seq 1 "$N"); do
     || echo "seed $s FAILED" >> "$OUT/falhas.txt"
 done
 
-# Report with the same exclusions (.el) that dvsim uses for usbdev
-cd "$OUT" && urg -full64 -lca -dir "$DB" -line nocasedef \
+# Report with the same exclusions (.el) and group flags that dvsim uses for usbdev
+cd "$OUT" && urg -full64 -lca +urg+lic+wait \
+  -show tests -grade index testfile \
+  -group ratio -group lrm_bin_name -group instcov_for_score \
+  -dir "$DB" -line nocasedef \
   -elfile "$CFG/usbdev_manual_excl.el" -elfile "$CFG/usbdev_unr_excl.el" \
   -report "$OUT/urg_report" -format both -log "$OUT/urg.log"
 grep -A3 'Total Coverage Summary' "$OUT/urg_report/dashboard.txt"
