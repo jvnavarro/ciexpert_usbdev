@@ -1,4 +1,7 @@
-interface usb20_if (input logic clk_i, input logic rst_ni);
+interface usb20_if (
+    input logic clk_i,
+    input logic rst_ni
+);
 
   // DUT inputs (driven by the driver / testbench)
   logic cio_usb_dp_i;
@@ -13,5 +16,10 @@ interface usb20_if (input logic clk_i, input logic rst_ni);
   logic cio_usb_dp_en_o;
   logic cio_usb_dn_en_o;
   logic cio_usb_oe_o;
+
+  // Always-On observation signals
+  logic usb_dp_pullup_en_o;
+  logic usb_dn_pullup_en_o;
+  logic wake_req_aon_o;
 
 endinterface : usb20_if

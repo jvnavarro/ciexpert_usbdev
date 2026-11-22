@@ -31,6 +31,27 @@ package usbdev_env_pkg;
     LinkResuming         = 6
   } usbdev_link_state_e;
 
+  typedef enum int {
+    IntrPktReceived   = 0,
+    IntrPktSent       = 1,
+    IntrDisconnected  = 2,
+    IntrHostLost      = 3,
+    IntrLinkReset     = 4,
+    IntrLinkSuspend   = 5,
+    IntrLinkResume    = 6,
+    IntrAvOutEmpty    = 7,
+    IntrRxFull        = 8,
+    IntrAvOverflow    = 9,
+    IntrLinkInErr     = 10,
+    IntrRxCrcErr      = 11,
+    IntrRxPidErr      = 12,
+    IntrRxBitstuffErr = 13,
+    IntrFrame         = 14,
+    IntrPowered       = 15,
+    IntrLinkOutErr    = 16,
+    IntrAvSetupEmpty  = 17
+  } usbdev_intr_e;
+
   // Environment
   `include "usbdev_env_cfg.sv"
   `include "usbdev_env_cov.sv"
