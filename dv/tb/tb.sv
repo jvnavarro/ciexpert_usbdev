@@ -40,8 +40,8 @@ module tb;
     .rst_ni(rst_n)
   );
 
-  // D+/D- (cio_usb_d*_i) are driven by usb20_driver; VBUS is always present
-  assign usb20_if_inst.cio_sense_i  = 1'b1;
+  // D+/D- are driven by usb20_driver; VBUS is controlled by the USB interface.
+  assign usb20_if_inst.cio_sense_i = usb20_if_inst.drive_vbus;
 
 
   // AON module

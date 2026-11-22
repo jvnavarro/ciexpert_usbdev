@@ -7,6 +7,8 @@ interface usb20_if (
   logic cio_usb_dp_i;
   logic cio_usb_dn_i;
   logic cio_sense_i;
+  // Host-controlled VBUS presence; asserted by default.
+  logic drive_vbus = 1'b1;
 
   // DUT outputs (driven by the USB device)
   logic cio_usb_dp_o;
