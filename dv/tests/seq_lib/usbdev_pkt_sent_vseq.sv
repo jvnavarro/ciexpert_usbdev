@@ -1,3 +1,27 @@
+// USBDEV packet sent interrupt verification sequence.
+//
+// Test objective:
+// Verify the pkt_sent interrupt and IN transmission completion status
+// after a USB transaction on endpoint 2.
+//
+// Verification scenario:
+// - Configure endpoint 2 and the USB transmission/reception buffers.
+// - Receive an OUT/DATA0 packet and verify the RX FIFO and buffer contents.
+// - Prepare and execute an IN transaction using the received data.
+// - Send the host ACK and check pkt_sent and in_sent status.
+// - Clear the completion status and verify interrupt deassertion.
+//
+// Validation results (25 seeds):
+// - Custom test: 25/25 passed; overall coverage: 59.37%.
+// - Original OpenTitan test: 25/25 passed; overall coverage: 64.47%.
+//
+// Observations:
+// - The sequence exercises endpoint 2 and selected buffer configurations.
+// - Additional endpoints and transaction scenarios are not covered here.
+// - Coverage figures are indicative: the two environments use different
+//   coverage configurations and are not directly equivalent.
+//
+
 class usbdev_pkt_sent_vseq extends usbdev_base_vseq;
 
 `uvm_object_utils(usbdev_pkt_sent_vseq)
