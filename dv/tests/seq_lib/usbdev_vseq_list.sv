@@ -13,4 +13,5 @@
 `include "usbdev_av_overflow_vseq.sv"
 
 `include "usbdev_av_empty_vseq.sv"
+`include "usbdev_rx_full_vseq.sv"
 
